@@ -1,0 +1,48 @@
+Possible actions to check:
+
+- Full Melee Attack (If melee attacking is possible*):
+    Decide between possible targets which has the highest score and choose that one.
+    Increase target score if: Current target is threatened by allies.
+                              Current target is prone.
+    Increase action score if: Current position is threatened by multiple enemies. (So moving would proc many attacks of opportunity)
+    Decrease action score if: Current health is low.
+
+- Full Ranged Attack (If ranged attacking is possible**):
+    Decide between possible targets which has the highest score and choose that one.
+    Decrease target score if: Current target is threatened by allies.
+                              Current target is prone.
+                              Current target is threatening self. (Decrease it a lot)
+    Decrease action score if: Current health is low.
+                              Current position is threatened by multiple enemies. (Decrease it a lot)
+
+- Get to safety (If ranged attacking or casting is possible***):
+    Decide between possible new possitions which has the highest score and choose that one.
+    Increase position score if: Position is close to allies.
+    Decrease position score if: Position is threatened by enemies.
+                                Moving there procs many attacks of opportunity.
+    Increase action score if: Current position is threatened by multiple enemies.
+
+- Switch to melee weapon and attack (If melee weapon is available):
+    Increase action score if: Current position is threatened by multiple enemies.
+                              Current position is close to allies.
+                              Current HP is low.
+    Determine possible target in the same way as in the Full Melee Attack.
+
+- Switch to ranged weapon and attack (If ranged weapon is available):
+    Increase action score if: Current position is not threatened by enemies.
+    Determine possible target in the same way as in the Full Ranged Attack.
+
+- Move and melee attack (If melee attacking is possible): 
+
+- Move and trip (If melee attacking is possible):
+
+- Move and ranged attack (If ranged attacking is possible):
+
+- Move and cast a spell (If spellcasting is available):
+
+- Get up (If prone):
+    CHECK THIS ONE
+
+*   Melee attacking is possible: Self has a melee weapon equipped and is not prone or disabled.
+**  Ranged attacking is possible: Self has a ranged weapon equipped and is not prone or disabled.
+*** Casting is possible: Self has spells remaining and is not prone or disabled.
