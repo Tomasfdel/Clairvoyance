@@ -1,3 +1,6 @@
+RECICLADO DE MENU OPTIONS
+
+
 --- Start Game
          1- Ask for names and position (Frontline or Backline).
          2- Ask for challenge rating.
@@ -11,6 +14,4 @@
          3- Set challenge rating? (This should be determined by the system, but it's probably really tough)
          4- Set gear / abilities.
          5- SET BEHAVIOUR.
-
-
 
