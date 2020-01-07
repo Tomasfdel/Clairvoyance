@@ -1,0 +1,94 @@
+Posibilidad de parametrizar los behaviours?
+Definición del lenguaje para acciones de jugadores
+Los modificadores los debería saber el juego o lo deberían dar los personajes?
+Considerar precargar personajes por CR y sugerir encounters
+
+
+
+Definición del DSL:
+
+-- Parte de Personajes -- 
+-- Stat Blocks, IDs, bandos --
+Decidir si el stat block es de un ID/Nombre o defino el stat block independientemente y lo asocio a un ID
+Size?
+HP
+Initiative
+Speed
+AC
+Attack
+Full Attack
+Spells & Charges
+Saves
+Abilities?
+
+
+
+-- Parte del Mapa --
+- Contorno: 
+	Primera Opcion: X : Y (X de ancho, Y de alto)
+	Segunda Opcion: Combinacion de {N right/R, N down/D, N left/L, N up/U} separados por guiones, describiendo el contorno.
+- Obstaculos
+	X, Y (donde X e Y pueden ser un valor N o algo de la forma N1 - N2 con N1 < N2 para expresar un intervalo [N1, N2])
+- Random Map?
+
+
+
+-- Definición de Win Condition y Lose Condition --
+Cada una de ellas es una condición que se va revisando para determinar cuál es el resultado del encounter.
+
+
+
+
+-- Definición de las IAs --
+Estructuras que puedo usar:
+PASS
+TARGET_ACTION TARGET DURATION
+ACTION DURATION
+TARGET_ACTION: - Melee attack
+               - Ranged attack
+               - Melee full attack
+               - Ranged full attack
+               - Charge
+               - Cast N spell
+               - Flank?
+               - Trip?
+TARGET: - ADJECTIVE ally
+        - ADJECTIVE enemy
+        - self
+ADJECTIVES: - Closest
+            - Furthest
+            - Weakest? Strongest?
+            - Most/Least vulnerable to spell?
+            - Random
+            - Specific target
+
+DURATION: - For X turns
+          - While charges available
+          - Until CONDITION
+          
+ACTION: - Retreat
+        - Go to cover
+        - Disengage
+        
+CONDICIONES: - 
+             - 
+             -
+             -
+             -
+             -
+             
+??? CHOOSE ... (Action List)
+??? FIX
+IF condicion THEN accion ELSE accion
+ACCION ; ACCION
+WHILE condicion do ACCION
+
+
+data GameAI s = Idle
+              | Action (s -> s)
+              | GameAI s :-: GameAI s
+              | Choose [GameAI s] (s -> [GameAI s] -> GameAI s)
+              | Fix (GameAI s -> GameAI s)
+ --           | Atomic (GameAI s)
+ --           | Interleave [GameAI s]
+              | If (s -> Bool) (GameAI s) (GameAI s)
