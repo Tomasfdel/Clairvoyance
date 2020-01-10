@@ -1,0 +1,4 @@
+MAP{
+	Layout: Rectangle 10 , 20;
+	Obstacles: 
+}

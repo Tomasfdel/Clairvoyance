@@ -1,0 +1,20 @@
+  
+  Team
+	
+	
+	
+	type UnitSaves = UnitSaves { Fortitude :: Int,
+                             Reflex :: Int, 
+                             Will :: Int } 
+                 deriving Show
+
+
+
+type AIUnit = AIUnit { Name :: String, 
+                       HP :: Int,
+                       Initiative :: Int,
+                       Speed :: Int,
+                       AC :: Int,
+                       Attack :: AttackDesc
+                       FullAttack :: [AttackDesc]
+                       Saves :: UnitSaves }

@@ -5,3 +5,11 @@ Makefile
 Ver cómo insertar mónadas
 Diseñar los DSL
 Ver si agrego una GUI
+
+
+Ver el problema del lexing de los die rolls
+Definir la consistencia de los ; en MAP y UNIT
+Permitir que los : estén separados de las palabras en los stat blocks.
+Ver de flexibilizar las definiciones en la sintaxis.
+Checkear lo de left recursion para la definición de las listas.
+Ver tema de los wrappers de Alex, capaz que alguno sea útil.

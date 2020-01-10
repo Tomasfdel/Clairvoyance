@@ -1,0 +1,14 @@
+MAP{
+	Layout: Rectangle 10 , 20;
+	Obstacles: 
+}
+
+UNIT Test_Unit {
+	HP: 10;
+	Initiative: +5;
+	Speed: 10;
+	AC: 15;
+	Attack: Melee +5 1 d 10;
+	Full Attack: Melee +5 1 d 10, Ranged (6) -5 4 d 8 - 10;
+	Saves: Fortitude: +4, Reflex: +6, Will: -1;
+}

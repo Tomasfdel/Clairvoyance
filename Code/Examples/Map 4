@@ -1,0 +1,4 @@
+MAP{
+	Layout: Outline 10 R - 20 D - 10 L - 20 U;
+	Obstacles: 
+}
