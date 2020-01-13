@@ -7,9 +7,11 @@ Diseñar los DSL
 Ver si agrego una GUI
 
 
-Ver el problema del lexing de los die rolls
-Definir la consistencia de los ; en MAP y UNIT
-Permitir que los : estén separados de las palabras en los stat blocks.
+TO DO:
+Hacer un Makefile
+Emprolijar la gramática para que no haya repetición de generadores en las reglas (en los elementos de las listas, por ejemplo)
 Ver de flexibilizar las definiciones en la sintaxis.
+Ver si puedo parsear algo del estilo "N dM" ya que actualmente eso forma (Int N), Var "dM"
 Checkear lo de left recursion para la definición de las listas.
 Ver tema de los wrappers de Alex, capaz que alguno sea útil.
+Ver el tema del error handling en el parseo.

@@ -2,6 +2,7 @@
 module Lexer (alexScanTokens) where
 
 import LexerTokens
+import Data.Char
 
 }
 
@@ -14,10 +15,10 @@ tokens :-
 	$white+        ;
 	"//".*         ;
 	"MAP"          { \s -> LTMap }
-	"Layout:"      { \s -> LTLayout }
+	"Layout"       { \s -> LTLayout }
 	"Rectangle"    { \s -> LTRectangle }
 	"Outline"      { \s -> LTOutline }
-	"Obstacles:"   { \s -> LTObstacles }
+	"Obstacles"    { \s -> LTObstacles }
 	"U"            { \s -> LTDirUp }
 	"R"            { \s -> LTDirRight }
 	"D"            { \s -> LTDirDown }
@@ -38,5 +39,7 @@ tokens :-
 	"Will"         { \s -> LTWill }
 	"TEAM"         { \s -> LTTeam }	
 	$digit+        { \s -> LTInt (read s) }
+	$digit+ "d" $digit+             { \s -> LTDie (read (takeWhile isDigit s), read (tail (dropWhile isDigit s))) }
+	"x" $digit+                     { \s -> LTCount (read (tail s)) }
 	[d\+\-\,\;\:\{\}\(\)]           { \s -> LTSym (head s) }
 	$alpha [$alpha $digit \_ \’]*   { \s -> LTVar s }

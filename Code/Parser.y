@@ -20,6 +20,8 @@ import LexerTokens
 	D              { LTDirDown }
 	L              { LTDirLeft }
 	Int            { LTInt $$ }
+	Die            { LTDie $$ }
+	Count          { LTCount $$ }
 	Name           { LTVar $$ }
 	Unit           { LTUnit }
 	HP             { LTHP }
@@ -34,6 +36,7 @@ import LexerTokens
 	Fortitude      { LTFortitude }
 	Reflex         { LTReflex }
 	Will           { LTWill }
+	Team           { LTTeam }
 	'd'            { LTSym 'd' }
 	'+'            { LTSym '+' }
 	'-'            { LTSym '-' }
@@ -49,9 +52,9 @@ import LexerTokens
 %%
 
 
-Game : Board UnitList                                     { ($1, $2) } 
+Game : Board UnitList TeamList                            { ($1, $2, $3) } 
 
-Board : Map '{' Layout LayoutDesc ';' Obstacles ObstacleList '}'    { ($4, $7) }
+Board : Map '{' Layout ':' LayoutDesc ';' Obstacles ':' ObstacleList ';' '}'    { ($5, $9) }
 
 LayoutDesc : Rectangle Int ',' Int                        { Rectangle $2 $4 }
            | Outline DirectionList                        { Outline $2 }
@@ -99,8 +102,11 @@ AttackRange : Melee                                       { Melee }
 Modifier : '+' Int                                        { $2 }
          | '-' Int                                        { - $2 }
 
-DieRoll : Int 'd' Int                                     { DieRoll {dieAmount = $1, dieValue = $3, modifier =  0} }
-        | Int 'd' Int Modifier                            { DieRoll {dieAmount = $1, dieValue = $3, modifier = $4} }
+DieRoll : DiceExp                                         { DieRoll {dieAmount = fst $1, dieValue = snd $1, modifier = 0} }
+        | DiceExp Modifier                                { DieRoll {dieAmount = fst $1, dieValue = snd $1, modifier = $2} }
+
+DiceExp : Int 'd' Int                                     { ($1, $3) }
+        | Die                                             { $1 }
             
 SavesList : UnitSave                                      { [$1] }
           | UnitSave ',' SavesList                        { $1 : $3 }
@@ -109,7 +115,16 @@ UnitSave : Fortitude ':' Modifier                         { Fortitude $3 }
          | Reflex ':' Modifier                            { Reflex $3 }
          | Will ':' Modifier                              { Will $3 }
 
+TeamList : Team Name '{' TeamMemberList '}'               { [($2, $4)] }
+         | Team Name '{' TeamMemberList '}' TeamList      { ($2, $4) : $6 }
 
+TeamMemberList : TeamMember ';'                           { [$1] }
+               | TeamMember ';' TeamMemberList            { $1 : $3 } 
+
+TeamMember : Name Count ':' CoordinateList                { ($1, $2, $4) }
+
+CoordinateList : '(' Int ',' Int ')'                      { [($2, $4)] }
+               | '(' Int ',' Int ')' ',' CoordinateList   { ($2, $4) : $7 }  
 
 {
 
@@ -119,7 +134,9 @@ data Direction = DirUp | DirRight | DirDown | DirLeft
 data Layout = Rectangle Int Int | Outline [(Int, Direction)] 
               deriving Show
 
-type Obstacle = ((Int, Int), (Int, Int)) 
+type Coordinate = (Int, Int)
+
+type Obstacle = (Coordinate, Coordinate) 
 
 type Map = (Layout, [Obstacle])
 
@@ -151,7 +168,9 @@ data UnitStat =
 
 type StatBlock = (String, [UnitStat])
 
-type Game = (Map, [StatBlock])
+type Team = (String, [(String, Int, [Coordinate])])
+
+type Game = (Map, [StatBlock], [Team])
 
 
 parseError :: [LexerToken] -> a
