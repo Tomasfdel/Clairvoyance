@@ -11,6 +11,9 @@ TO DO:
 Hacer un Makefile
 Sacar los .hs del Lexer y el Parser para que sean generados automáticamente
 Ver cómo manejar el error handling 
+No puedo meter números negativos, arreglar el parser para poder hacer eso.
+BoardGeneration: Considerar hacer una función updateBoard
+                 Si quiero generar un board con bordes y falla por obstáculos mal puestos, las coordenadas que me devuelve no me sirven porque están offseteadas
 Emprolijar la gramática para que no haya repetición de generadores en las reglas (en los elementos de las listas, por ejemplo)
 Ver de flexibilizar las definiciones en la sintaxis.
 Ver si puedo parsear algo del estilo "N dM" ya que actualmente eso forma (Int N), Var "dM"
