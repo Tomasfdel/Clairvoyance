@@ -9,6 +9,8 @@ Ver si agrego una GUI
 
 TO DO:
 Hacer un Makefile
+Sacar los .hs del Lexer y el Parser para que sean generados automáticamente
+Ver cómo manejar el error handling 
 Emprolijar la gramática para que no haya repetición de generadores en las reglas (en los elementos de las listas, por ejemplo)
 Ver de flexibilizar las definiciones en la sintaxis.
 Ver si puedo parsear algo del estilo "N dM" ya que actualmente eso forma (Int N), Var "dM"
