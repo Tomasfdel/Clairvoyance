@@ -2,7 +2,7 @@ Controlar y armar el tablero
 IA para los enemigos
 Acciones posibles para personajes
 Makefile
-Ver cómo insertar mónadas
+Ver cómo insertar mónadas: Probablemente en la generación de todo antes del juego. Ver en qué otro lugar
 Diseñar los DSL
 Ver si agrego una GUI
 
@@ -20,3 +20,4 @@ Ver si puedo parsear algo del estilo "N dM" ya que actualmente eso forma (Int N)
 Checkear lo de left recursion para la definición de las listas.
 Ver tema de los wrappers de Alex, capaz que alguno sea útil.
 Ver el tema del error handling en el parseo.
+Revisar la función de Either para no escribir el case como un pelotudo por todos lados

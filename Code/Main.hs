@@ -3,6 +3,7 @@ module Main where
 import Lexer
 import Parser
 import BoardGeneration
+import UnitPlacement
 
 main = do
   input <- getContents
@@ -10,4 +11,5 @@ main = do
       board = generateBoard boardInput
    in case board of
            Left errorMsg -> putStrLn ("ERROR: " ++ errorMsg)
-           Right trueBoard -> printBoard trueBoard
+           Right (trueBoard, offset) -> putStrLn (show (placeUnits trueBoard units teams offset))
+                                             

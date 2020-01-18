@@ -150,27 +150,27 @@ data AttackRange = Melee | Ranged Int
 
 type AttackDesc = (AttackRange, Int, DieRoll)
 
-data UnitSave = 
+data SaveInput = 
      Fortitude Int |
      Reflex Int    |
      Will Int 
      deriving Show
 
-data UnitStat = 
+data StatInput = 
 	HP Int                   |
 	Initiative Int           |
 	Speed Int                |
 	AC Int                   |
 	Attack AttackDesc        |
 	FullAttack [AttackDesc]  |
-	Saves [UnitSave] 
+	Saves [SaveInput] 
 	deriving Show
 
-type StatBlock = (String, [UnitStat])
+type UnitInput = (String, [StatInput])
 
 type Team = (String, [(String, Int, [Coordinate])])
 
-type Game = (Map, [StatBlock], [Team])
+type Game = (Map, [UnitInput], [Team])
 
 
 parseError :: [LexerToken] -> a

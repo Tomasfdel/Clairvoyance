@@ -2,3 +2,5 @@
 *.o
 *.info
 Code/Main
+Code/Lexer.hs
+Code/Parser.hs
