@@ -1,0 +1,109 @@
+Do or consider:
+Posibilidad de parametrizar los behaviours?
+Definición del lenguaje para acciones de jugadores
+Los modificadores los debería saber el juego o lo deberían dar los personajes?
+Considerar precargar personajes por CR y sugerir encounters
+Enemy Size, Passive Abilities
+Enemy Spells & Charges
+Random Map?
+Accion INTERLEAVE?
+Combine both ranged and melee in full attack?
+Alias para un conjunto de acciones?
+Permitir explicitar un tipo de unidad en vez de un ID específico (Por ejemplo, "random Goblin" en vez de "Goblin A" o "Goblin B")
+Ampliar conditions
+Ver cómo arreglar el tipo de TurnAction, porque actualmente es un asco
+
+-- Definición de Win Condition y Lose Condition --
+Cada una de ellas es una condición que se va revisando para determinar cuál es el resultado del encounter.
+
+
+
+
+-- Definición de las IAs --
+Estructuras que puedo usar:
+PASS    
+STANDARD_ACTION
+MOVE_ACTION
+MOVE_ACTION - STANDARD_ACTION
+STANDARD_ACTION - MOVE_ACTION
+MOVE_ACTION - MOVE_ACTION
+FULL_ACTION
+
+STANDARD_ACTION: Attack TARGET
+                 // Cast X Spell TARGET
+                 
+MOVE_ACTION: // Random
+             - Approach (TARGET) ?
+             // Disengage
+             - Defend
+             // Flank (TARGET) ?
+
+FULL_ACTION: // Retreat
+             - Full attack TARGET
+             // Charge (TARGET)
+     
+TARGET: - ADJECTIVE ally
+        - ADJECTIVE enemy
+        - Self
+        - Specific Character
+        
+ADJECTIVES: - Closest / Furthest
+            - Most injured / Least injured
+            // Random (Random available?)
+            - Last
+            // Best / Worst specific stat (If available)
+            // Most / Least vulnerable to spell? (If available)
+// Posiblemente alguno más aprovechando las cosas de las conditions
+// Ver de agregar condiciones de estilo true/false para decidir cosas (Por ejemplo, closest in sight)
+
+// RANDOM_CHOICE [accion]
+// TRY accion, accion, accion, ..., DEFAULT accion
+IF condicion THEN accion ELSE accion
+ACCION ; ACCION
+WHILE condicion do ACCION
+
+CONDICIONES: - Team count COMPARISON Int
+             - Team : Unit count COMPARISON Int
+             // Team : Unit : ID stat COMPARISON Something
+             - Team : Unit in RANGE
+             // Specific Unit Threat Count COMPARISON Int
+             - TARGET in RANGE
+             // Team Unit Count in RANGE COMPARISON Int
+             // Specific Unit in specific place?
+             // Specific unit alive?
+             // Relative Turn Count?
+             - total turn count COMPARISON Int
+             
+             - Not CONDICION
+             - CONDICION and CONDICION
+             - CONDICION or CONDICION
+             - (CONDICION)
+             
+RANGE: - INT
+       - Melee
+       - Ranged attack range
+       - Speed
+       - RANGE + RANGE
+       - RANGE * RANGE
+
+
+
+
+Default actions when the action is not possible:
+
+Attack -> Target not in range: Approach Target
+          Invalid target: Look for closest target / previous target
+Cast X Spell -> Target not in range: Approach Target
+                Invalid target: Look for closest target / previous target of the same team
+                Not anymore charges: Skip the turn
+Random -> Not able to move: Defend
+Approach Target -> Invalid target: Look for closest target / previous target / most relevant target
+                   Not able to move: Defend
+Flank Target -> Target not in range: Keep Approaching
+                Not able to move: Defend
+Disengage -> Not able to move: Defend
+Retreat -> Not able to move: Defend
+Charge Target -> Target not in range: Approach Target
+                 Invalid target: Look for closest target / previous target / available target
+Full attack Target -> Target not in range: Charge Target / Approach target
+                      Invalid target: Look for closest target / previous target / available target                 

@@ -10,9 +10,9 @@ data LexerToken =
   LTDirRight       |
   LTDirDown        |
   LTDirLeft        |
-  LTInt Int        |
+  LTNat Int        |
   LTDie (Int ,Int) |
-  LTCount Int      |
+  LTMult Int       |
   LTSym Char       |
   LTVar String     |
   LTUnit           |
@@ -24,10 +24,30 @@ data LexerToken =
   LTFullAttack     |
   LTMelee          |
   LTRanged         |
-  LTSpells         |
-  LTSaves          |
-  LTFortitude      |
-  LTReflex         |
-  LTWill           |
+  LTAI             |
+  LTPass           |
+  LTIf             |
+  LTThen           |
+  LTElse           |
+  LTWhile          |
+  LTNot            |
+  LTAnd            |
+  LTOr             |
+  LTApproach       |
+  LTDefend         |
+  LTAlly           |
+  LTEnemy          |
+  LTSelf           |
+  LTClosest        |
+  LTFurthest       |
+  LTMost           |
+  LTLeast          |
+  LTInjured        |
+  LTLast           |
+  LTCount          |
+  LTIn             |
+  LTRange          |
+  LTTotal          |
+  LTTurn           |
   LTTeam          
   deriving (Eq,Show)

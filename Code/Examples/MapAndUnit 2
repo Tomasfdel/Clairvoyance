@@ -10,7 +10,6 @@ UNIT Test_Unit {
 	AC: 15;
 	Attack: Melee +5 1d10;
 	Full Attack: Melee +5 1 d 10, Ranged (6) -5 4d8 - 10;
-	Saves: Fortitude: +4, Reflex: +6, Will: -1;
 }
 
 UNIT Test_Unit2 {
@@ -18,16 +17,20 @@ UNIT Test_Unit2 {
 	Speed: 5;
 	AC: 11;
 	Initiative: -4;
-	Saves: Will: -1, Fortitude: +4, Reflex: +6;
 	Full Attack: Melee 1d6, Melee -5 1d6+3;
 	Attack: Melee 1d6;
 }
 
+AI Test_AI {
+	Pass;
+}
+
+
 TEAM Test_Team1 {
-	Test_Unit x1 : (9,9);
+	Test_Unit, Test_AI x1 : (9,9);
 }
 
 TEAM Test_Team2 {
-	Test_Unit x2 : (8,8), (8,9);
-	Test_Unit x4 : (7,7), (7,8), (7,9), (7,10);
+	Test_Unit, Test_AI x2 : (8,8), (8,9);
+	Test_Unit, Test_AI x4 : (7,7), (7,8), (7,9), (7,10);
 }

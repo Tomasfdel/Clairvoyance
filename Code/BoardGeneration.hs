@@ -1,6 +1,6 @@
 module BoardGeneration where
 
-import Parser
+import ParserTypes
 import qualified Data.Vector as V
 
 data Tile = Empty    |
@@ -92,26 +92,26 @@ offsetObstacles :: [Obstacle] -> Coordinate -> [Obstacle]
 offsetObstacles obstacles (col, row) = map (\(h, v) ->  ((fst h + col, snd h + col), (fst v + row, snd v + row)) ) obstacles
 
 
-generateBoard :: Map -> Either String (Board, Coordinate)
-generateBoard (Rectangle w h, obstacles)   = if w <= 0 then Left "Board width is not positive."
-                                                       else if h <= 0 then Left "Board height is not positive."
-                                                                      else case placeObstacles (rectangleBoard w h) obstacles of
-                                                                                Left errorMsg -> Left errorMsg
-                                                                                Right board -> Right (board, (0, 0))
-generateBoard (Outline borders, obstacles) = if not (checkBorderValues borders)
-                                                then Left "Invalid outline value." 
-                                                else case walkBorders borders (0, 0) (V.replicate 4 0) of
-                                                          Left errorMessage -> Left errorMessage
-                                                          Right maxValues -> let minH = maxValues V.! 0
-                                                                                 maxH = maxValues V.! 1
-                                                                                 minV = maxValues V.! 2
-                                                                                 maxV = maxValues V.! 3
-                                                                                 baseBoard = rectangleBoard (maxH - minH + 3) (maxV - minV + 3)
-                                                                                 originOffset = (-minH + 1, -minV + 1)
-                                                                                 borderBoard = placeBorders baseBoard borders originOffset
-                                                                                 wallBoard = floodFill borderBoard [(0, 0)] Empty Wall
-                                                                                 finalBoard = replaceTiles wallBoard Border Empty
-                                                                                 newObstacles = offsetObstacles obstacles originOffset
-                                                                              in case placeObstacles finalBoard newObstacles of
-                                                                                      Left errorMsg -> Left errorMsg
-                                                                                      Right board -> Right (board, originOffset)
+convertBoardInput :: Map -> Either String (Board, Coordinate)
+convertBoardInput (Rectangle w h, obstacles)   = if w <= 0 then Left "Board width is not positive."
+                                                           else if h <= 0 then Left "Board height is not positive."
+                                                                          else case placeObstacles (rectangleBoard w h) obstacles of
+                                                                                    Left errorMsg -> Left errorMsg
+                                                                                    Right board -> Right (board, (0, 0))
+convertBoardInput (Outline borders, obstacles) = if not (checkBorderValues borders)
+                                                    then Left "Invalid outline value." 
+                                                    else case walkBorders borders (0, 0) (V.replicate 4 0) of
+                                                              Left errorMessage -> Left errorMessage
+                                                              Right maxValues -> let minH = maxValues V.! 0
+                                                                                     maxH = maxValues V.! 1
+                                                                                     minV = maxValues V.! 2
+                                                                                     maxV = maxValues V.! 3
+                                                                                     baseBoard = rectangleBoard (maxH - minH + 3) (maxV - minV + 3)
+                                                                                     originOffset = (-minH + 1, -minV + 1)
+                                                                                     borderBoard = placeBorders baseBoard borders originOffset
+                                                                                     wallBoard = floodFill borderBoard [(0, 0)] Empty Wall
+                                                                                     finalBoard = replaceTiles wallBoard Border Empty
+                                                                                     newObstacles = offsetObstacles obstacles originOffset
+                                                                                  in case placeObstacles finalBoard newObstacles of
+                                                                                          Left errorMsg -> Left errorMsg
+                                                                                          Right board -> Right (board, originOffset)

@@ -32,14 +32,34 @@ tokens :-
 	"Full Attack"  { \s -> LTFullAttack }
 	"Melee"        { \s -> LTMelee }
 	"Ranged"       { \s -> LTRanged }
-	"Spells"       { \s -> LTSpells }
-	"Saves"        { \s -> LTSaves }
-	"Fortitude"    { \s -> LTFortitude }
-	"Reflex"       { \s -> LTReflex }
-	"Will"         { \s -> LTWill }
 	"TEAM"         { \s -> LTTeam }	
-	$digit+        { \s -> LTInt (read s) }
+	"AI"           { \s -> LTAI }
+	"Pass"         { \s -> LTPass }
+	"if"           { \s -> LTIf }
+	"then"         { \s -> LTThen } 
+	"else"         { \s -> LTElse }
+	"while"        { \s -> LTWhile }
+	"not"          { \s -> LTNot }
+	"and"          { \s -> LTAnd }
+	"or"           { \s -> LTOr }
+	"Approach"     { \s -> LTApproach }
+	"Defend"       { \s -> LTDefend }
+	"ally"         { \s -> LTAlly }
+	"enemy"        { \s -> LTEnemy }
+	"self"         { \s -> LTSelf }
+	"closest"      { \s -> LTClosest }
+	"furthest"     { \s -> LTFurthest }
+	"most"         { \s -> LTMost }
+	"least"        { \s -> LTLeast }
+	"injured"      { \s -> LTInjured }
+	"last"         { \s -> LTLast }
+	"count"        { \s -> LTCount }
+	"in"           { \s -> LTIn }
+	"range"        { \s -> LTRange }
+	"total"        { \s -> LTTotal }
+	"turn"         { \s -> LTTurn }
+	$digit+        { \s -> LTNat (read s) }
 	$digit+ "d" $digit+             { \s -> LTDie (read (takeWhile isDigit s), read (tail (dropWhile isDigit s))) }
-	"x" $digit+                     { \s -> LTCount (read (tail s)) }
-	[d\+\-\,\;\:\{\}\(\)]           { \s -> LTSym (head s) }
+	"x" $digit+                     { \s -> LTMult (read (tail s)) }
+	[d\+\-\,\;\:\{\}\(\)\*\<\>\=\!]         { \s -> LTSym (head s) }
 	$alpha [$alpha $digit \_ \’]*   { \s -> LTVar s }

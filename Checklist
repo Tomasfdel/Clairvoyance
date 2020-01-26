@@ -1,9 +1,17 @@
-Controlar y armar el tablero
+Ver cómo agregar cosas random. Ya de por sí voy a necesitar esto para los die rolls de la AI.
+Ver cómo definir targets específicos (Por ejemplo, Kobolds : Kobold Slinger B)
+Ver cómo escapar de equipos de enemigos (Probablemente involucre Dijkstra maps o algo de research)
+Ver cómo encontrar el camino hacia un objetivo y decidir entre posibles múltiples caminos por el más útil
+Ver cómo procesar line of sight de las cosas
+Ver cómo agregar una turn count
+
+
+
+
 IA para los enemigos
 Acciones posibles para personajes
 Makefile
 Ver cómo insertar mónadas: Probablemente en la generación de todo antes del juego. Ver en qué otro lugar
-Diseñar los DSL
 Ver si agrego una GUI
 
 
@@ -11,7 +19,6 @@ TO DO:
 Hacer un Makefile
 Sacar los .hs del Lexer y el Parser para que sean generados automáticamente
 Ver cómo manejar el error handling 
-No puedo meter números negativos, arreglar el parser para poder hacer eso.
 BoardGeneration: Considerar hacer una función updateBoard
                  Si quiero generar un board con bordes y falla por obstáculos mal puestos, las coordenadas que me devuelve no me sirven porque están offseteadas
 Emprolijar la gramática para que no haya repetición de generadores en las reglas (en los elementos de las listas, por ejemplo)
@@ -21,3 +28,9 @@ Checkear lo de left recursion para la definición de las listas.
 Ver tema de los wrappers de Alex, capaz que alguno sea útil.
 Ver el tema del error handling en el parseo.
 Revisar la función de Either para no escribir el case como un pelotudo por todos lados
+Permitir que los nombres de cosas puedan estar entre comillas
+Ver cómo arreglar el tipo del Try de las Actions para que sea más lindo
+Ver cómo estructurar el TurnSequence para que sea más lindo
+Comentar todo el código
+No me gusta la estructuración de los tipos para las acciones, está todo muy raro
+Precedencia de And y Or en las Conditions
