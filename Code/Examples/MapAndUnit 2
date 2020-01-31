@@ -16,7 +16,7 @@ UNIT Test_Unit2 {
 	HP: 20;
 	Speed: 5;
 	AC: 11;
-	Initiative: -4;
+	Initiative: +3;
 	Full Attack: Melee 1d6, Melee -5 1d6+3;
 	Attack: Melee 1d6;
 }
@@ -31,6 +31,6 @@ TEAM Test_Team1 {
 }
 
 TEAM Test_Team2 {
+	Test_Unit2, Test_AI x4 : (7,7), (7,8), (7,9), (7,10);
 	Test_Unit, Test_AI x2 : (8,8), (8,9);
-	Test_Unit, Test_AI x4 : (7,7), (7,8), (7,9), (7,10);
 }

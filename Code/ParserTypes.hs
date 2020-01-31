@@ -49,13 +49,13 @@ instance Show IntComparison where
     show (Comparison f) = "IntComparison"
 
 
-data Condition = UnitCount UnitDesc IntComparison             |
-                 UnitRange UnitDesc Range                     |
-                 SpecificUnitRange String String String Range |
-                 UnitRangeCount UnitDesc Range IntComparison  |
-                 TotalTurn IntComparison                      |
-                 Not Condition                                |
-                 And Condition Condition                      |
+data Condition = UnitCount UnitDesc IntComparison            |
+                 UnitRange UnitDesc Range                    |
+                 SpecificUnitRange String String Int Range   |
+                 UnitRangeCount UnitDesc Range IntComparison |
+                 TotalTurn IntComparison                     |
+                 Not Condition                               |
+                 And Condition Condition                     |
                  Or Condition Condition                       
                  deriving Show
 
@@ -73,7 +73,7 @@ data Adjective = Closest      |
                  deriving Show
                  
 data Target = Self                           |
-              Specific String String String  |
+              Specific String String Int     |
               Description Adjective UnitDesc 
               deriving Show
 

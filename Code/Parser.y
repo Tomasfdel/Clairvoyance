@@ -169,7 +169,7 @@ StandardAction : Attack Target                            { AttackAction $2 }
 FullAction : FullAttack Target                            { FullAttackAction $2 }
 
 Target : Self                                             { Self }
-       | Name ':' Name ':' Name                           { Specific $1 $3 $5 }
+       | Name ':' Name ':' Nat                            { Specific $1 $3 $5 }
        | Adjective UnitDesc                               { Description $1 $2 }
        
 Adjective : Closest                                       { Closest }
@@ -185,7 +185,7 @@ UnitDesc : Ally                                           { Ally }
 
 Condition : UnitDesc Count IntComparison                             { UnitCount $1 $3 }
           | UnitDesc In Range '(' RangeExp ')'                       { UnitRange $1 $5 }
-          | Name ':' Name ':' Name In Range '(' RangeExp ')'         { SpecificUnitRange $1 $3 $5 $9 }
+          | Name ':' Name ':' Nat In Range '(' RangeExp ')'          { SpecificUnitRange $1 $3 $5 $9 }
           | UnitDesc Count In Range '(' RangeExp ')' IntComparison   { UnitRangeCount $1 $6 $8 }
           | Total Turn Count IntComparison                           { TotalTurn $4 }
           | Not Condition                                            { Not $2 }

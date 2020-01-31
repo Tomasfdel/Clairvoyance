@@ -6,12 +6,15 @@ import StatBlockGeneration
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Vector as V
+import qualified Data.Char as C
+import qualified Data.List as L
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
 
 data MobUnit = MobUnit {
                   name :: String,
                   team :: String,
+                  identifier :: Int,
                   position :: Coordinate,
                   statBlock :: StatBlock,
                   ai :: Action }
@@ -33,10 +36,17 @@ shiftUnits teams offset = map
                                                     units)) 
                           teams
 
+-- ~ TO DO: Estas funciones se pueden simplificar haciendo un map del campo correspondiente y creando una función del tipo [String] -> (M.Map String a) -> Maybe String
 invalidNameInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBlock) -> Maybe String
 invalidNameInTeam [] _ = Nothing
 invalidNameInTeam ((name, _, _, _) : us) statMap = if M.member name statMap then invalidNameInTeam us statMap
-                                                                         else Just ("Unknown unit name " ++ name ++ " in team ")
+                                                                            else Just ("Unknown unit name " ++ name ++ " in team ")
+
+invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String Action) -> Maybe String
+invalidAIInTeam [] _ = Nothing
+invalidAIInTeam ((_, ai, _, _) : us) aiMap = if M.member ai aiMap then invalidAIInTeam us aiMap
+                                                                  else Just ("Unknown AI name " ++ ai ++ " in team ")
+
 
 placeTeamUnits :: Board -> [Coordinate] -> Int -> Either String Board
 placeTeamUnits board [] _ = Right board
@@ -57,21 +67,26 @@ placeTeam board ((name, ai, amount, positions) : us) index = if amount /= length
                                                                          Left errorMsg -> Left (errorMsg ++ name ++ " in team ")
                                                                          Right newBoard -> placeTeam newBoard us (index + length positions)
 
+buildTeamList :: (M.Map String StatBlock)-> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> (M.Map String Int) -> [Unit]
+buildTeamList _ _ _ [] _ = []
+buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap = let baseID = if M.member name idMap then idMap M.! name else 1
+                                                                                  (newID, units) = L.mapAccumL (\idNum pos -> (idNum + 1, Mob MobUnit {name = name, team = team, identifier = idNum, position = pos, statBlock = statMap M.! name, ai = aiMap M.! ai}) )
+                                                                                                   baseID positions
+                                                                               in units ++ buildTeamList statMap aiMap team us (M.insert name newID idMap)
 
-buildTeamUnits :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> (String, String, Int, [Coordinate]) -> [Unit]
-buildTeamUnits statMap aiMap team (name, ai, amount, positions) = map (\pos -> Mob MobUnit {name = name, team = team, position = pos, statBlock = statMap M.! name, ai = aiMap M.! ai}) positions
-
-buildTeam :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> V.Vector Unit
-buildTeam statMap aiMap team units = V.fromList (concat (map (buildTeamUnits statMap aiMap team) units))
+buildTeam :: (M.Map String StatBlock)-> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> V.Vector Unit
+buildTeam statMap aiMap team units = V.fromList (buildTeamList statMap aiMap team units M.empty)
 
 
 createUnits :: Board -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> V.Vector Unit -> Either String (Board, V.Vector Unit)
 createUnits board _ _ [] units = Right (board, units)
-createUnits board statMap aiMap ((teamName, positions) : ts) units = case invalidNameInTeam positions statMap of
+createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invalidNameInTeam teamUnits statMap of
                                                                           Just errorMsg -> Left (errorMsg ++ teamName ++ ".")
-                                                                          Nothing -> case placeTeam board positions (length units) of
-                                                                                          Left errorMsg -> Left (errorMsg ++ teamName ++ ".")
-                                                                                          Right newBoard -> createUnits newBoard statMap aiMap ts (units V.++ buildTeam statMap aiMap teamName positions)
+                                                                          Nothing -> case invalidAIInTeam teamUnits aiMap of
+                                                                                          Just errorMsg -> Left (errorMsg ++ teamName ++ ".")
+                                                                                          Nothing -> case placeTeam board teamUnits (length units) of
+                                                                                                          Left errorMsg -> Left (errorMsg ++ teamName ++ ".")
+                                                                                                          Right newBoard -> createUnits newBoard statMap aiMap ts (units V.++ buildTeam statMap aiMap teamName teamUnits)
 
 placeUnits :: Board -> Coordinate -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> Either String (Board, V.Vector Unit)
 placeUnits board offset units ais teams = case duplicateTeamName teams S.empty of

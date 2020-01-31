@@ -72,7 +72,7 @@ CONDICIONES: - Team count COMPARISON Int
              // Specific Unit in specific place?
              // Specific unit alive?
              // Relative Turn Count?
-             - total turn count COMPARISON Int
+             // total turn count COMPARISON Int
              
              - Not CONDICION
              - CONDICION and CONDICION
