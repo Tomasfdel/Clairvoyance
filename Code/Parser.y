@@ -59,7 +59,6 @@ import ParserTypes
     And            { LTAnd }
     Or             { LTOr }
     Approach       { LTApproach }
-    Defend         { LTDefend }
     Ally           { LTAlly }
     Enemy          { LTEnemy }
     Self           { LTSelf }
@@ -162,7 +161,6 @@ TurnDesc : Pass                                           { [Pass] }
          | StandardAction '-' MoveAction                  { [Standard $1, Move $3] }
 
 MoveAction : Approach Target                              { Approach $2 }
-           | Defend                                       { Defend }
 
 StandardAction : Attack Target                            { AttackAction $2 }
  

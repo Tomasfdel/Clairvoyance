@@ -34,7 +34,6 @@ data LexerToken =
   LTAnd            |
   LTOr             |
   LTApproach       |
-  LTDefend         |
   LTAlly           |
   LTEnemy          |
   LTSelf           |

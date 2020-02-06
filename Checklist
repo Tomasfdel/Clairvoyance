@@ -28,3 +28,4 @@ Permitir que los nombres de cosas puedan estar entre comillas
 Ver cómo estructurar el TurnSequence para que sea más lindo
 Comentar todo el código
 No me gusta la estructuración de los tipos para las acciones, está todo muy raro
+Ver por qué no puedo hacer pattern matching con la sequence

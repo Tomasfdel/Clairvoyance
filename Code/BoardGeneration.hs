@@ -13,9 +13,8 @@ type Board = V.Vector (V.Vector Tile)
 
 
 printBoard :: Board -> IO ()
-printBoard board = if V.null board then putStrLn ""
-                                   else do putStrLn (show (V.head board))
-                                           printBoard (V.tail board)
+printBoard board = do V.mapM_ (\row -> putStrLn (show row)) board
+                      putStrLn ""
 
 checkBoundaries :: (Int, Int) -> Int -> Bool
 checkBoundaries (start, end) size = and [start >= 0, start < size, end >= 0, end < size, start <= end]

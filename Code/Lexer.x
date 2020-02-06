@@ -43,7 +43,6 @@ tokens :-
 	"and"          { \s -> LTAnd }
 	"or"           { \s -> LTOr }
 	"Approach"     { \s -> LTApproach }
-	"Defend"       { \s -> LTDefend }
 	"ally"         { \s -> LTAlly }
 	"enemy"        { \s -> LTEnemy }
 	"self"         { \s -> LTSelf }

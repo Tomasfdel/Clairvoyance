@@ -11,17 +11,38 @@ import qualified Data.List as L
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
 
+printUnits :: V.Vector Unit -> IO ()
+printUnits units = do V.mapM_ (\unit -> putStrLn (show unit)) units
+                      putStrLn ""
+
+
 data MobUnit = MobUnit {
                   name :: String,
                   team :: String,
                   identifier :: Int,
                   position :: Coordinate,
                   statBlock :: StatBlock,
-                  ai :: Action }
+                  ai :: Action,
+                  targets :: [Int] }
                deriving Show
 
 data Unit = Mob MobUnit
             deriving Show
+
+getName :: Unit -> String
+getName (Mob unit) = name unit
+
+getTeam :: Unit -> String
+getTeam (Mob unit) = team unit
+
+getIdentifier :: Unit -> Int
+getIdentifier (Mob unit) = identifier unit
+
+getAI :: Unit -> Action
+getAI (Mob unit) = ai unit
+
+getInitiative :: Unit -> Int
+getInitiative (Mob unit) = initiative (statBlock unit)
 
 -- TO DO: Unificar esto con la función de arriba, por favor
 duplicateTeamName :: [Team] -> S.Set String -> Maybe String
@@ -70,7 +91,7 @@ placeTeam board ((name, ai, amount, positions) : us) index = if amount /= length
 buildTeamList :: (M.Map String StatBlock)-> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> (M.Map String Int) -> [Unit]
 buildTeamList _ _ _ [] _ = []
 buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap = let baseID = if M.member name idMap then idMap M.! name else 1
-                                                                                  (newID, units) = L.mapAccumL (\idNum pos -> (idNum + 1, Mob MobUnit {name = name, team = team, identifier = idNum, position = pos, statBlock = statMap M.! name, ai = aiMap M.! ai}) )
+                                                                                  (newID, units) = L.mapAccumL (\idNum pos -> (idNum + 1, Mob MobUnit {name = name, team = team, identifier = idNum, position = pos, statBlock = statMap M.! name, ai = aiMap M.! ai, targets = []}) )
                                                                                                    baseID positions
                                                                                in units ++ buildTeamList statMap aiMap team us (M.insert name newID idMap)
 

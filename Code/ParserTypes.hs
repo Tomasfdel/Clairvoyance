@@ -21,6 +21,7 @@ data DieRoll = DieRoll { dieAmount :: Int,
 data AttackRange = Melee | Ranged Int 
                    deriving Show
 
+-- TO DO: Hacer esto un record por consistencia?
 type AttackDesc = (AttackRange, Int, DieRoll)
 
 data StatInput = 
@@ -34,7 +35,7 @@ data StatInput =
 
 type UnitInput = (String, [StatInput])
 
-data Range = IntR Int         |
+data Range = IntR Int        |
              MeleeR          |
              AttackR         |
              FullAttackR     |
@@ -77,8 +78,7 @@ data Target = Self                           |
               Description Adjective UnitDesc 
               deriving Show
 
-data MoveAction = Approach Target |
-                  Defend
+data MoveAction = Approach Target
                   deriving Show
 
 

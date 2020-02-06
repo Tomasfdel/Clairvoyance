@@ -1,15 +1,19 @@
 module Game where
 
+import BoardGeneration
 import StatBlockGeneration
 import UnitPlacement
+import GameState
+import AIActions
 import qualified Data.List as L
 import qualified Data.Vector as V
 import qualified System.Random as R
+                             
+takeTurn :: GameState -> Int -> IO(GameState)
+takeTurn gameState index = case (units gameState) V.! index of
+                                Mob unit -> do (newState, newAI, _) <- aiStep gameState index (getAI ((units gameState) V.! index))
+                                               return (newState { units = (units newState) V.// [(index, Mob (unit { ai = newAI }))] })
 
-takeTurn :: Board -> V.Vector Unit -> Int -> IO(Board, V.Vector Unit)
-takeTurn board units index = case units V.! index of
-                                  Mob unit -> do (newBoard, newUnits, newAI, _) <- aiStep board units index (ai (units V.! index))
-                                                 return (newBoard, newUnits V.// [(index, unit { ai = newAI })])
 
 getMobInitiative :: (V.Vector Unit) -> Int -> Int
 getMobInitiative units ind = let Mob unit = units V.! ind
@@ -20,7 +24,7 @@ initiativeDieRoll (index, mod) = do result <- R.randomRIO (1,20)
                                     return (index, result + mod)
 
 initiativeDiceRolls :: (V.Vector Unit) -> [Int] -> IO([(Int, Int)])
-initiativeDiceRolls units indices = let indexWithMod = map (\i -> (i, getMobInitiative units i)) indices
+initiativeDiceRolls units indices = let indexWithMod = map (\i -> (i, getInitiative (units V.! i))) indices
                                      in mapM initiativeDieRoll indexWithMod
 
 regroupInitiatives :: [(Int, Int)] -> [[Int]]

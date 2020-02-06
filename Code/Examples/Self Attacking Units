@@ -1,0 +1,40 @@
+MAP{
+	Layout: Rectangle 5, 5;
+	Obstacles:;
+}
+
+UNIT Self_Attacker {
+	HP: 30;
+	Initiative: +5;
+	Speed: 10;
+	AC: 15;
+	Attack: Melee +5 1d10+2;
+	Full Attack: Melee +5 1d10+2;
+}
+
+AI Self_Attack {
+	while ally count >= 1 { 
+	    Attack self; 
+	}
+}
+
+
+TEAM Team1 {
+	Self_Attacker, Self_Attack x1 : (0,0);
+}
+
+TEAM Team2 {
+	Self_Attacker, Self_Attack x1 : (1,1);
+}
+
+TEAM Team3 {
+	Self_Attacker, Self_Attack x1 : (2,2);
+}
+
+TEAM Team4 {
+	Self_Attacker, Self_Attack x1 : (3,3);
+}
+
+TEAM Team5 {
+	Self_Attacker, Self_Attack x1 : (4,4);
+}
