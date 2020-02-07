@@ -15,7 +15,6 @@ printUnits :: V.Vector Unit -> IO ()
 printUnits units = do V.mapM_ (\unit -> putStrLn (show unit)) units
                       putStrLn ""
 
-
 data MobUnit = MobUnit {
                   name :: String,
                   team :: String,
@@ -29,6 +28,10 @@ data MobUnit = MobUnit {
 data Unit = Mob MobUnit
             deriving Show
 
+unitIsAlive :: Unit -> Bool
+unitIsAlive (Mob unit) = healthPoints (statBlock unit) >= 0
+
+
 getName :: Unit -> String
 getName (Mob unit) = name unit
 
@@ -40,6 +43,12 @@ getIdentifier (Mob unit) = identifier unit
 
 getAI :: Unit -> Action
 getAI (Mob unit) = ai unit
+
+getTargets :: Unit -> [Int]
+getTargets (Mob unit) = targets unit
+
+getStatBlock :: Unit -> StatBlock
+getStatBlock (Mob unit) = statBlock unit
 
 getInitiative :: Unit -> Int
 getInitiative (Mob unit) = initiative (statBlock unit)

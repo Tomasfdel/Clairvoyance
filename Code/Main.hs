@@ -25,6 +25,7 @@ turnHandler gameState initiative index = do putStrLn ""
                                             putStrLn ""
                                             printGameState gameState
                                             putStrLn ("Initiative index: " ++ (show index))
+                                            putStrLn ("Unit index: " ++ (show (initiative V.! index)))
                                             _ <- getLine
                                             newState <- takeTurn gameState (initiative V.! index)
                                             let newIndex = mod (index + 1) (V.length initiative)

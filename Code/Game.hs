@@ -10,9 +10,13 @@ import qualified Data.Vector as V
 import qualified System.Random as R
                              
 takeTurn :: GameState -> Int -> IO(GameState)
-takeTurn gameState index = case (units gameState) V.! index of
-                                Mob unit -> do (newState, newAI, _) <- aiStep gameState index (getAI ((units gameState) V.! index))
-                                               return (newState { units = (units newState) V.// [(index, Mob (unit { ai = newAI }))] })
+takeTurn gameState index = if unitIsAlive ((units gameState) V.! index)
+                              then case (units gameState) V.! index of
+                                        Mob unit -> do (newState, newAI, _) <- aiStep gameState index (getAI ((units gameState) V.! index))
+                                                       let Mob newUnit = (units newState) V.! index
+                                                           newUnits = (units newState) V.// [(index, Mob (newUnit {ai = newAI }))]
+                                                        in return (newState { units = newUnits })
+                              else return gameState
 
 
 getMobInitiative :: (V.Vector Unit) -> Int -> Int

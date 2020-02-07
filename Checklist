@@ -2,7 +2,7 @@ Ver cómo escapar de equipos de enemigos (Probablemente involucre Dijkstra maps 
 Ver cómo encontrar el camino hacia un objetivo y decidir entre posibles múltiples caminos por el más útil
 Ver cómo procesar line of sight de las cosas
 Ver si quiero agregar verificación semántica de las actions.
-
+Agregar crits (sintaxis e interpretación en los attack rolls)
 
 
 IA para los enemigos

@@ -7,9 +7,12 @@ import UnitPlacement
 import GameState
 import Control.Monad.State
 import System.Random
-import qualified Data.Vector as V
+import qualified Data.List as L
 import qualified Data.Map as M
+import qualified Data.Ord as O
+import qualified Data.Set as S
 import qualified Data.Sequence as Seq
+import qualified Data.Vector as V
 
 
 buildAImap :: [AIInput] -> (M.Map String Action) -> Either String (M.Map String Action)
@@ -98,7 +101,7 @@ applyUnitPredicate _ _ _ = False
 
 searchTargets :: Board -> (V.Vector Unit) -> Int -> (Unit -> Bool) -> (V.Vector (V.Vector Bool)) -> (Seq.Seq (Coordinate, Float)) -> [Unit]
 searchTargets board units maxR pred visited queue = if null queue then [] 
-                                                                  else let ((), (newVisited, revCoords)) = runState (findNewTiles board maxR (Seq.index queue 1)) (visited, [])
+                                                                  else let ((), (newVisited, revCoords)) = runState (findNewTiles board maxR (Seq.index queue 0)) (visited, [])
                                                                            newCoords = reverse revCoords
                                                                            targets = map (\(Unit index) -> units V.! index) (filter (applyUnitPredicate units pred) (map (coordToTile board) newCoords))
                                                                         in targets ++ (searchTargets board units maxR pred newVisited ((Seq.drop 1 queue) Seq.>< (Seq.fromList newCoords)))
@@ -131,28 +134,58 @@ rollDice dieRoll = do results <- sequence (replicate (dieAmount dieRoll) (random
                       return (modifier dieRoll + sum results)
 
 
--- TO DO: Ver de ahcer funciones de update units
+updateIfDead :: Board -> Unit -> Board
+updateIfDead board (Mob unit) = if not (unitIsAlive (Mob unit)) then let (unitCol, unitRow) = position unit
+                                                                         newRow = (board V.! unitRow) V.// [(unitCol, Empty)]
+                                                                         newBoard = board V.// [(unitRow, newRow)]
+                                                                      in newBoard
+                                                                else board
 
+-- TO DO: Ver de hacer funciones de update units
 -- TO DO: Ver si quiero precalcular el daño o lo hago solo si el ataque pega (en cuyo caso, ver cómo escribirlo lindo)
 -- TO DO: Checkear cuando atacan a una unidad si está RIP
 -- TO DO: Sacar el IO de todo esto, para algo agarraste un randomGen al principio
 -- TO DO: Arreglar el problema del damageRoll al que le tengo que hacer el max adentro de la resta, queda espantoso.
 resolveAttack :: GameState -> Int -> Int -> IO (GameState)
 resolveAttack state attackInd defendInd = let Mob attacker = (units state) V.! attackInd
-                                              Mob defender = (units state) V.! defendInd
-                                           in do attackRoll <- rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = (\(_, modifier, _) -> modifier) (attack (statBlock attacker)) })
-                                                 damageRoll <- (rollDice ((\(_, _, damageRoll) -> damageRoll) (attack (statBlock attacker))))
-                                                 if attackRoll >= armorClass (statBlock defender) then let newAttTargets = defendInd : (targets attacker)
-                                                                                                           newAttacker = attacker { targets = newAttTargets }
-                                                                                                           newDefender = defender { statBlock = (statBlock defender) { healthPoints = healthPoints (statBlock defender) - (max 1 damageRoll) } }
-                                                                                                           newUnits = (units state) V.// [(attackInd, Mob newAttacker), (defendInd, Mob newDefender)]
+                                              newAttTargets = defendInd : (targets attacker)
+                                              newAttacker = attacker { targets = newAttTargets }
+                                              newUnits = (units state) V.// [(attackInd, Mob newAttacker)]
+                                              Mob defender = newUnits V.! defendInd
+                                           in do attackRoll <- rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = (\(_, modifier, _) -> modifier) (attack (statBlock newAttacker)) })
+                                                 damageRoll <- (rollDice ((\(_, _, damageRoll) -> damageRoll) (attack (statBlock newAttacker))))
+                                                 if attackRoll >= armorClass (statBlock defender) then let damageDealt = max 1 damageRoll
+                                                                                                           newDefender = defender { statBlock = (statBlock defender) { healthPoints = healthPoints (statBlock defender) - damageDealt } }
+                                                                                                           finalUnits = newUnits V.// [(defendInd, Mob newDefender)]
+                                                                                                           finalBoard = updateIfDead (board state) (Mob newDefender)
                                                                                                         in do putStrLn "Attack Successful!\n"
-                                                                                                              return (state { units = newUnits })
-                                                                                                  else  let newAttTargets = defendInd : (targets attacker)
-                                                                                                            newAttacker = attacker { targets = newAttTargets }
-                                                                                                            newUnits = (units state) V.// [(attackInd, Mob newAttacker)]
-                                                                                                         in do putStrLn "Attack Failed!\n"
-                                                                                                               return (state { units = newUnits })
+                                                                                                              return (state { board = finalBoard, units = finalUnits })
+                                                                                                  else do putStrLn "Attack Failed!\n"
+                                                                                                          return (state { units = newUnits })
+
+unitToInt :: GameState -> Unit -> Int
+unitToInt state (Mob unit) = let (col, row) = position unit
+                                 Unit index = ((board state) V.! row) V.! col
+                              in index
+
+intToUnit :: GameState -> Int -> Unit
+intToUnit state index = (units state) V.! index
+
+findUnitsInHistory :: (S.Set Int) -> [Int] -> [Int]
+findUnitsInHistory _ [] = []
+findUnitsInHistory unitSet (index : is) = if S.member index unitSet then index : (findUnitsInHistory (S.delete index unitSet) is)
+                                                                    else findUnitsInHistory unitSet is
+
+-- TO DO: COnsiderar unificar si uso Ints o Units para las funciones
+sortByAdjective :: GameState -> Int -> [Unit] -> Adjective -> [Int]
+sortByAdjective state index searchUnits Closest = map (unitToInt state) searchUnits
+sortByAdjective state index searchUnits Furthest = reverse (sortByAdjective state index searchUnits Closest)
+sortByAdjective state index searchUnits LeastInjured = map (unitToInt state) (L.sortBy (O.comparing (\(Mob unit) -> healthPoints (statBlock unit))) searchUnits)
+sortByAdjective state index searchUnits MostInjured = reverse (sortByAdjective state index searchUnits LeastInjured)
+sortByAdjective state index searchUnits Last = let unitSet = S.fromList (map (unitToInt state) searchUnits)
+                                                   targetHistory = getTargets ((units state) V.! index)
+                                                in findUnitsInHistory unitSet targetHistory
+
 
 evalMoveAction :: GameState -> Int -> MoveAction -> IO(GameState, Bool)
 evalMoveAction state _ _ = return (state, True)
@@ -164,8 +197,21 @@ evalStandardAction :: GameState -> Int -> StandardAction -> IO(GameState, Bool)
 evalStandardAction gameState index (AttackAction target) = case target of
                                                                 Self -> do newState <- resolveAttack gameState index index
                                                                            return (newState, True)
-                                                                _ -> return (gameState, True)
+                                                                Specific team name id -> let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
+                                                                                             attackRange = getAttackRange (attack (getStatBlock ((units gameState) V.! index)))
+                                                                                             searchResults = unitsInRange gameState index predicate attackRange
+                                                                                          in if not (V.null searchResults) then do newState <- resolveAttack gameState index (unitToInt gameState (V.head searchResults))
+                                                                                                                                   return (newState, True)
+                                                                                                                           else return (gameState, False)
+                                                                Description adjective unitDesc -> let unitPred = evalUnitDesc gameState index unitDesc
+                                                                                                      attackRange = getAttackRange (attack (getStatBlock ((units gameState) V.! index)))
+                                                                                                      searchResults = unitsInRange gameState index unitPred attackRange
+                                                                                                      orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
+                                                                                                   in if not (null orderedTargets) then do newState <- resolveAttack gameState index (head orderedTargets)
+                                                                                                                                           return (newState, True)
+                                                                                                                                   else return (gameState, False)
 
+-- TO DO: Ver cómo estructurar las default choices. De momento si no puede hacer una acción, no hace nada.
 
 evalFullAction :: GameState -> Int -> FullAction -> IO(GameState, Bool)
 evalFullAction state _ _ = return (state, True)

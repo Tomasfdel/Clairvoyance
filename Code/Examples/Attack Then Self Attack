@@ -1,0 +1,64 @@
+MAP{
+	Layout: Rectangle 5, 11;
+	Obstacles:;
+}
+
+UNIT Melee_Unit {
+	HP: 30;
+	Initiative: +5;
+	Speed: 10;
+	AC: 15;
+	Attack: Melee +5 1d10+2;
+	Full Attack: Melee +5 1d10+2;
+}
+
+UNIT Ranged_Unit {
+	HP: 20;
+	Initiative: +10;
+	Speed: 10;
+	AC: 20;
+	Attack: Ranged (5) +10 1d12;
+	Full Attack: Ranged (5) +10 1d12;
+}
+
+AI Attack_Then_Self_Attack {
+    while enemy count in range (Attack) >= 1 {
+		Attack closest enemy;
+    }
+	while ally count >= 1 { 
+	    Attack self; 
+	}
+}
+
+
+TEAM Team1 {
+	Melee_Unit, Attack_Then_Self_Attack x1 : (0,0);
+}
+
+TEAM Team2 {
+	Melee_Unit, Attack_Then_Self_Attack x1 : (0,1);
+}
+
+TEAM Team3 {
+	Melee_Unit, Attack_Then_Self_Attack x1 : (1,0);
+}
+
+TEAM Team4 {
+	Melee_Unit, Attack_Then_Self_Attack x1 : (1,1);
+}
+
+TEAM Team5 {
+	Ranged_Unit, Attack_Then_Self_Attack x1 : (0,7);
+}
+
+TEAM Team6 {
+	Ranged_Unit, Attack_Then_Self_Attack x1 : (0,10);
+}
+
+TEAM Team7 {
+	Ranged_Unit, Attack_Then_Self_Attack x1 : (4,7);
+}
+
+TEAM Team8 {
+	Ranged_Unit, Attack_Then_Self_Attack x1 : (4,10);
+}
