@@ -120,7 +120,7 @@ UnitStat : HP ':' Nat                                     { HP $3 }
          | Initiative ':' Modifier                        { Initiative $3 }
          | Speed ':' Nat                                  { Speed $3 }
          | AC ':' Int                                     { AC $3 }
-	     | Attack ':' AttackDesc                          { Attack $3 }
+	     | Attack ':' AttackDescList                      { Attack $3 }
 	     | FullAttack ':' AttackDescList                  { FullAttack $3 }
 	     
 AttackDescList : AttackDesc                               { [$1] }

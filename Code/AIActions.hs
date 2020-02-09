@@ -39,7 +39,7 @@ evalRange gameState index (IntR n) = n
 evalRange gameState index MeleeR = 1
 evalRange gameState index AttackR = let Mob current = (units gameState) V.! index
                                         currAttack = attack (statBlock current)
-                                     in getAttackRange currAttack
+                                     in minimum (map getAttackRange currAttack)
 evalRange gameState index FullAttackR = let Mob current = (units gameState) V.! index
                                             currFullAttack = fullAttack (statBlock current)
                                          in minimum (map getAttackRange currFullAttack) 
@@ -128,40 +128,55 @@ evalCondition gameState index (Not cond) = not (evalCondition gameState index co
 evalCondition gameState index (And c1 c2) = evalCondition gameState index c1 && evalCondition gameState index c2
 evalCondition gameState index (Or c1 c2) = evalCondition gameState index c1 || evalCondition gameState index c2
 
+rollDie :: Int -> Int -> State GameState Int
+rollDie minVal maxVal = state $ \gameState -> let generator = randomGen gameState
+                                                  (result, newGen) = randomR (minVal, maxVal) generator
+                                               in (result, gameState { randomGen = newGen })
+
 -- TO DO: Revisar si me conviene que sea un dieRoll o que sea una tripla
-rollDice :: DieRoll -> IO (Int)
-rollDice dieRoll = do results <- sequence (replicate (dieAmount dieRoll) (randomRIO (1, (dieValue dieRoll))))
+rollDice :: DieRoll -> State GameState Int
+rollDice dieRoll = do results <- sequence (replicate (dieAmount dieRoll) (rollDie 1 (dieValue dieRoll)))
                       return (modifier dieRoll + sum results)
 
+updateBoard :: Coordinate -> Tile -> State GameState ()
+updateBoard (col, row) newTile = modify (\gameState -> let newRow = ((board gameState) V.! row) V.// [(col, newTile)]
+                                                           newBoard = (board gameState) V.// [(row, newRow)]
+                                                        in gameState { board = newBoard } )
+                                                    
 
-updateIfDead :: Board -> Unit -> Board
-updateIfDead board (Mob unit) = if not (unitIsAlive (Mob unit)) then let (unitCol, unitRow) = position unit
-                                                                         newRow = (board V.! unitRow) V.// [(unitCol, Empty)]
-                                                                         newBoard = board V.// [(unitRow, newRow)]
-                                                                      in newBoard
-                                                                else board
+updateIfDead :: Int -> State GameState ()
+updateIfDead index = do gameState <- get
+                        let unit = (units gameState) V.! index
+                         in if not (unitIsAlive unit) then do updateBoard (getPosition unit) Empty
+                                                              return ()
+                                                      else return ()
+
+rollAttack :: AttackDesc -> State GameState (Int, Int)
+rollAttack (_, mod, damage) = do attackRoll <- rollDice (DieRoll { dieAmount = 1, dieValue = 20, modifier = mod } )
+                                 damageRoll <- rollDice damage
+                                 return (attackRoll, max 1 damageRoll)
+
+checkAttackHit :: Int -> (Int, Int) -> State GameState ()
+checkAttackHit defendInd (attackRoll, damageRoll) = do (Mob defender) <- gets (\gameState -> (units gameState) V.! defendInd)
+                                                       if attackRoll >= armorClass (statBlock defender) 
+                                                          then modify (\gameState -> let newDefender = defender { statBlock = (statBlock defender) { healthPoints = healthPoints (statBlock defender) - damageRoll } }
+                                                                                         newUnits = (units gameState) V.// [(defendInd, Mob newDefender)] 
+                                                                                      in gameState { units = newUnits })
+                                                          else return ()
 
 -- TO DO: Ver de hacer funciones de update units
 -- TO DO: Ver si quiero precalcular el daño o lo hago solo si el ataque pega (en cuyo caso, ver cómo escribirlo lindo)
 -- TO DO: Checkear cuando atacan a una unidad si está RIP
 -- TO DO: Sacar el IO de todo esto, para algo agarraste un randomGen al principio
 -- TO DO: Arreglar el problema del damageRoll al que le tengo que hacer el max adentro de la resta, queda espantoso.
-resolveAttack :: GameState -> Int -> Int -> IO (GameState)
-resolveAttack state attackInd defendInd = let Mob attacker = (units state) V.! attackInd
-                                              newAttTargets = defendInd : (targets attacker)
-                                              newAttacker = attacker { targets = newAttTargets }
-                                              newUnits = (units state) V.// [(attackInd, Mob newAttacker)]
-                                              Mob defender = newUnits V.! defendInd
-                                           in do attackRoll <- rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = (\(_, modifier, _) -> modifier) (attack (statBlock newAttacker)) })
-                                                 damageRoll <- (rollDice ((\(_, _, damageRoll) -> damageRoll) (attack (statBlock newAttacker))))
-                                                 if attackRoll >= armorClass (statBlock defender) then let damageDealt = max 1 damageRoll
-                                                                                                           newDefender = defender { statBlock = (statBlock defender) { healthPoints = healthPoints (statBlock defender) - damageDealt } }
-                                                                                                           finalUnits = newUnits V.// [(defendInd, Mob newDefender)]
-                                                                                                           finalBoard = updateIfDead (board state) (Mob newDefender)
-                                                                                                        in do putStrLn "Attack Successful!\n"
-                                                                                                              return (state { board = finalBoard, units = finalUnits })
-                                                                                                  else do putStrLn "Attack Failed!\n"
-                                                                                                          return (state { units = newUnits })
+resolveAttack :: Int -> Int -> (StatBlock -> [AttackDesc]) -> State GameState ()
+resolveAttack attackInd defendInd attackType = do (Mob attacker) <- gets (\gameState -> (units gameState) V.! attackInd)
+                                                  modify (\gameState -> let newAttacker = attacker { targets = defendInd : (targets attacker) }
+                                                                         in gameState { units = (units gameState) V.// [(attackInd, Mob newAttacker)] })
+                                                  attackRolls <- mapM rollAttack (attackType (statBlock attacker))
+                                                  mapM_ (checkAttackHit defendInd) attackRolls
+                                                  updateIfDead defendInd
+
 
 unitToInt :: GameState -> Unit -> Int
 unitToInt state (Mob unit) = let (col, row) = position unit
@@ -186,61 +201,70 @@ sortByAdjective state index searchUnits Last = let unitSet = S.fromList (map (un
                                                    targetHistory = getTargets ((units state) V.! index)
                                                 in findUnitsInHistory unitSet targetHistory
 
-
-evalMoveAction :: GameState -> Int -> MoveAction -> IO(GameState, Bool)
-evalMoveAction state _ _ = return (state, True)
--- ~ evalMoveAction gameState index (Approach target) = 
-                                              
-
-evalStandardAction :: GameState -> Int -> StandardAction -> IO(GameState, Bool)
--- ~ evalStandardAction state _ _ = (state, True)
-evalStandardAction gameState index (AttackAction target) = case target of
-                                                                Self -> do newState <- resolveAttack gameState index index
-                                                                           return (newState, True)
-                                                                Specific team name id -> let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
-                                                                                             attackRange = getAttackRange (attack (getStatBlock ((units gameState) V.! index)))
-                                                                                             searchResults = unitsInRange gameState index predicate attackRange
-                                                                                          in if not (V.null searchResults) then do newState <- resolveAttack gameState index (unitToInt gameState (V.head searchResults))
-                                                                                                                                   return (newState, True)
-                                                                                                                           else return (gameState, False)
-                                                                Description adjective unitDesc -> let unitPred = evalUnitDesc gameState index unitDesc
-                                                                                                      attackRange = getAttackRange (attack (getStatBlock ((units gameState) V.! index)))
-                                                                                                      searchResults = unitsInRange gameState index unitPred attackRange
-                                                                                                      orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
-                                                                                                   in if not (null orderedTargets) then do newState <- resolveAttack gameState index (head orderedTargets)
-                                                                                                                                           return (newState, True)
-                                                                                                                                   else return (gameState, False)
-
 -- TO DO: Ver cómo estructurar las default choices. De momento si no puede hacer una acción, no hace nada.
-
-evalFullAction :: GameState -> Int -> FullAction -> IO(GameState, Bool)
-evalFullAction state _ _ = return (state, True)
--- ~ evalFullAction gameState index (FullAttackAction target) = 
-
-
+-- TO DO: Ver cómo unificar la evaluación de targets en las distintas acciones
+evalAction :: Int -> TurnAction -> State GameState Bool 
+evalAction _ (Move (Approach target)) = return True
+evalAction index (Standard (AttackAction target)) = case target of
+                                                         Self -> do resolveAttack index index attack
+                                                                    return True
+                                                         Specific team name id -> do gameState <- get
+                                                                                     let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
+                                                                                         attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
+                                                                                         searchResults = unitsInRange gameState index predicate attackRange
+                                                                                      in if not (V.null searchResults) then do resolveAttack index (unitToInt gameState (V.head searchResults)) attack
+                                                                                                                               return True
+                                                                                                                       else return False
+                                                         Description adjective unitDesc -> do gameState <- get
+                                                                                              let unitPred = evalUnitDesc gameState index unitDesc
+                                                                                                  attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
+                                                                                                  searchResults = unitsInRange gameState index unitPred attackRange
+                                                                                                  orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
+                                                                                               in if not (null orderedTargets) then do resolveAttack index (head orderedTargets) attack
+                                                                                                                                       return True
+                                                                                                                               else return False
+evalAction index (Full (FullAttackAction target)) = case target of
+                                                         Self -> do resolveAttack index index fullAttack
+                                                                    return True
+                                                         Specific team name id -> do gameState <- get
+                                                                                     let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
+                                                                                         attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
+                                                                                         searchResults = unitsInRange gameState index predicate attackRange
+                                                                                      in if not (V.null searchResults) then do resolveAttack index (unitToInt gameState (V.head searchResults)) fullAttack
+                                                                                                                               return True
+                                                                                                                       else return False
+                                                         Description adjective unitDesc -> do gameState <- get
+                                                                                              let unitPred = evalUnitDesc gameState index unitDesc
+                                                                                                  attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
+                                                                                                  searchResults = unitsInRange gameState index unitPred attackRange
+                                                                                                  orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
+                                                                                               in if not (null orderedTargets) then do resolveAttack index (head orderedTargets) fullAttack
+                                                                                                                                       return True
+                                                                                                                               else return False
+ 
 -- TO DO: Dejar de hacer esto tail recursive cuando vea cómo meter State en todo esto.
-evalTurn :: GameState -> Int -> [TurnAction] -> Bool -> IO (GameState, Bool)
-evalTurn gameState _ [] result = return (gameState, result)
-evalTurn gameState _ (Pass : as) result = return (gameState, result)
-evalTurn gameState index ((Move ma) : as) result = do (newState, maResult) <- evalMoveAction gameState index ma 
-                                                      evalTurn newState index as (result && maResult)
-evalTurn gameState index ((Standard sa) : as) result = do (newState, saResult) <- evalStandardAction gameState index sa 
-                                                          evalTurn newState index as (result && saResult)
-evalTurn gameState index ((Full fa) : as) result = do (newState, faResult) <- evalFullAction gameState index fa 
-                                                      evalTurn newState index as (result && faResult)
+evalTurn :: Int -> [TurnAction] -> State GameState Bool
+evalTurn _ [] = return True
+evalTurn _ (Pass : as) = return True
+evalTurn index (action : as) = do result <- evalAction index action 
+                                  restResult <- evalTurn index as
+                                  return (result && restResult)
 
-
-aiStep :: GameState -> Int -> Action -> IO(GameState, Action, Bool)
-aiStep gameState index None = return (gameState, None, False)
-aiStep gameState index (Turn ts) = do (newState, success) <- evalTurn gameState index ts True
-                                      let newAction = if success then None else (Turn ts)
-                                       in return (newState, newAction, success)
-aiStep gameState index (If cond tAct fAct) = let nextAction = if evalCondition gameState index cond then tAct else fAct
-                                              in aiStep gameState index nextAction
-aiStep gameState index (Cons first second) = do response <- aiStep gameState index first
-                                                case response of
-                                                     (newState, None, playedTurn) -> if playedTurn then return (newState, second, playedTurn)
-                                                                                                   else aiStep gameState index second
-                                                     (newState, newFirst, playedTurn) -> return (newState, Cons newFirst second, playedTurn)
-aiStep gameState index (While cond action) = if evalCondition gameState index cond then aiStep gameState index (Cons action (While cond action))
-                                                                                   else return (gameState, None, False)
+aiStep :: Int -> Action -> State GameState (Action, Bool)
+aiStep index None = return (None, False)
+aiStep index (Turn ts) = do success <- evalTurn index ts
+                            let newAction = if success then None else (Turn ts)
+                             in return (newAction, success)
+aiStep index (If cond tAct fAct) = do gameState <- get
+                                      let nextAction = if evalCondition gameState index cond then tAct else fAct
+                                       in aiStep index nextAction
+aiStep index (Cons first second) = do gameState <- get
+                                      response <- aiStep index first
+                                      case response of
+                                           (None, playedTurn) -> if playedTurn then return (second, True)
+                                                                               else do put gameState
+                                                                                       aiStep index second
+                                           (newFirst, playedTurn) -> return (Cons newFirst second, playedTurn)
+aiStep index (While cond action) = do gameState <- get
+                                      if evalCondition gameState index cond then aiStep index (Cons action (While cond action))
+                                                                            else return (None, False)

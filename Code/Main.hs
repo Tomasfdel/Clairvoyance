@@ -8,37 +8,40 @@ import UnitPlacement
 import AIActions
 import GameState
 import Game
-import qualified Data.Vector as V
+import Control.Monad.State
 import System.Random
 import System.Environment
+import qualified Data.Vector as V
+
 
 printGameState :: GameState -> IO ()
 printGameState gameState = do printBoard (board gameState)
                               printUnits (units gameState)
-                              putStrLn (show (turnCount gameState))
+                              putStrLn ("Turn Count: " ++ show (turnCount gameState))
                               putStrLn ""
 
 
--- TO DO: Esto también debería ser una stateful computation?
 turnHandler :: GameState -> (V.Vector Int) -> Int -> IO()
-turnHandler gameState initiative index = do putStrLn ""
-                                            putStrLn ""
-                                            printGameState gameState
-                                            putStrLn ("Initiative index: " ++ (show index))
-                                            putStrLn ("Unit index: " ++ (show (initiative V.! index)))
-                                            _ <- getLine
-                                            newState <- takeTurn gameState (initiative V.! index)
-                                            let newIndex = mod (index + 1) (V.length initiative)
-                                                newTurn = if newIndex == 0 then turnCount gameState + 1 else turnCount gameState
-                                             in turnHandler (newState {turnCount = newTurn}) initiative newIndex
-
+turnHandler gameState initiative index = let (playedTurn, newState) = runState (takeTurn (initiative V.! index)) gameState
+                                             newIndex = mod (index + 1) (V.length initiative)
+                                             newTurn = if newIndex == 0 then turnCount gameState + 1 else turnCount gameState
+                                          in if playedTurn then do _ <- getLine
+                                                                   putStrLn ""
+                                                                   putStrLn ""
+                                                                   printGameState newState
+                                                                   putStrLn ("Initiative index: " ++ (show index))
+                                                                   putStrLn ("Unit index: " ++ (show (initiative V.! index)))
+                                                                   turnHandler (newState {turnCount = newTurn}) initiative newIndex
+                                                           else turnHandler (newState {turnCount = newTurn}) initiative newIndex
 
 playGame :: Board -> (V.Vector Unit) -> IO()
 playGame board units = do init <- initiativeRoll units
                           putStrLn "Initiative order:"
                           putStrLn (show init)
                           randomGen <- getStdGen
-                          turnHandler (GameState {board = board, units = units, turnCount = 1, randomGen = randomGen}) init 0
+                          let gameState = GameState {board = board, units = units, turnCount = 1, randomGen = randomGen}
+                           in do printGameState gameState
+                                 turnHandler gameState init 0
                           
                           
 main :: IO()

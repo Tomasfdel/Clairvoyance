@@ -12,7 +12,7 @@ data StatBlock = StatBlock {
                      initiative :: Int,
                      speed :: Int,
                      armorClass :: Int,
-                     attack :: AttackDesc,
+                     attack :: [AttackDesc],
                      fullAttack :: [AttackDesc]} 
                  deriving Show
                  
@@ -21,7 +21,6 @@ statBlockSize = 6
 
 
 data StatTypes = IntType Int              |
-                 AttackType AttackDesc    |
                  AttacksType [AttackDesc] 
                  deriving Show
 
@@ -31,7 +30,7 @@ statBlockFromMap map = let (IntType healthPoints)   = map M.! "HP"
                            (IntType initiative)     = map M.! "Initiative"
                            (IntType speed)          = map M.! "Speed"
                            (IntType armorClass)     = map M.! "AC"
-                           (AttackType attack)      = map M.! "Attack"
+                           (AttacksType attack)     = map M.! "Attack"
                            (AttacksType fullAttack) = map M.! "FullAttack"
                         in StatBlock { healthPoints = healthPoints,
                                        initiative = initiative,
@@ -57,9 +56,9 @@ buildStatBlock ((Speed n) : ss) map = if M.member "Speed" map then Left "Duplica
                                                                             else buildStatBlock ss (M.insert "Speed" (IntType n) map)
 buildStatBlock ((AC n) : ss) map = if M.member "AC" map then Left "Duplicate AC field in unit "
                                                         else buildStatBlock ss (M.insert "AC" (IntType n) map)
-buildStatBlock ((Attack n) : ss) map = if M.member "Attack" map then Left "Duplicate Attack field in unit "
-                                                                else if not (validAttack n) then Left "Invalid Attack in unit "
-                                                                                            else buildStatBlock ss (M.insert "Attack" (AttackType n) map)
+buildStatBlock ((Attack ns) : ss) map = if M.member "Attack" map then Left "Duplicate Attack field in unit "
+                                                                 else if not (all validAttack ns) then Left "Invalid Attack in unit "
+                                                                                                  else buildStatBlock ss (M.insert "Attack" (AttacksType ns) map)
 buildStatBlock ((FullAttack ns) : ss) map = if M.member "FullAttack" map then Left "Duplicate Full Attack field in unit "
                                                                           else if not (all validAttack ns) then Left "Invalid Full Attack in unit "
                                                                                                                 else buildStatBlock ss (M.insert "FullAttack" (AttacksType ns) map)

@@ -7,8 +7,8 @@ Agregar crits (sintaxis e interpretación en los attack rolls)
 
 IA para los enemigos
 Acciones posibles para personajes
+Revisar archivos viejos (De los primeros que hice) a ver si se pueden agregar mónadas (State, Maybe, etc)
 Makefile
-Ver cómo insertar mónadas.
 Ver si agrego una GUI
 
 
@@ -29,3 +29,4 @@ Ver cómo estructurar el TurnSequence para que sea más lindo
 Comentar todo el código
 No me gusta la estructuración de los tipos para las acciones, está todo muy raro
 Ver por qué no puedo hacer pattern matching con la sequence
+Cuando evalúo un ataque, le pego al objetivo y le sigo pegando aunque lo haya matado. Ver si permito modificar y buscar otros objetivos en ese caso.

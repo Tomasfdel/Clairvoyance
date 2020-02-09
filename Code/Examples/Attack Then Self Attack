@@ -8,8 +8,8 @@ UNIT Melee_Unit {
 	Initiative: +5;
 	Speed: 10;
 	AC: 15;
-	Attack: Melee +5 1d10+2;
-	Full Attack: Melee +5 1d10+2;
+	Attack: Melee +20 3d1;
+	Full Attack: Melee +20 5d1;
 }
 
 UNIT Ranged_Unit {
@@ -17,8 +17,8 @@ UNIT Ranged_Unit {
 	Initiative: +10;
 	Speed: 10;
 	AC: 20;
-	Attack: Ranged (5) +10 1d12;
-	Full Attack: Ranged (5) +10 1d12;
+	Attack: Ranged (5) +20 7d1;
+	Full Attack: Ranged (5) +20 10d1;
 }
 
 AI Attack_Then_Self_Attack {
@@ -26,7 +26,7 @@ AI Attack_Then_Self_Attack {
 		Attack closest enemy;
     }
 	while ally count >= 1 { 
-	    Attack self; 
+	    Full Attack self; 
 	}
 }
 

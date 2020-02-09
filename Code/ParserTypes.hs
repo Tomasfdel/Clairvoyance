@@ -29,7 +29,7 @@ data StatInput =
     Initiative Int           |
     Speed Int                |
     AC Int                   |
-    Attack AttackDesc        |
+    Attack [AttackDesc]      |
     FullAttack [AttackDesc]   
     deriving Show
 

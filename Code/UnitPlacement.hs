@@ -41,6 +41,9 @@ getTeam (Mob unit) = team unit
 getIdentifier :: Unit -> Int
 getIdentifier (Mob unit) = identifier unit
 
+getPosition :: Unit -> Coordinate
+getPosition (Mob unit) = position unit
+
 getAI :: Unit -> Action
 getAI (Mob unit) = ai unit
 
