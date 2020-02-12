@@ -99,16 +99,16 @@ applyUnitPredicate :: (V.Vector Unit) -> (Unit -> Bool) -> Tile -> Bool
 applyUnitPredicate units pred (Unit index) = pred (units V.! index)
 applyUnitPredicate _ _ _ = False
 
-searchTargets :: Board -> (V.Vector Unit) -> Int -> (Unit -> Bool) -> (V.Vector (V.Vector Bool)) -> (Seq.Seq (Coordinate, Float)) -> [Unit]
+searchTargets :: Board -> (V.Vector Unit) -> Int -> (Unit -> Bool) -> (V.Vector (V.Vector Bool)) -> (Seq.Seq (Coordinate, Float)) -> [Int]
 searchTargets board units maxR pred visited queue = if null queue then [] 
                                                                   else let ((), (newVisited, revCoords)) = runState (findNewTiles board maxR (Seq.index queue 0)) (visited, [])
                                                                            newCoords = reverse revCoords
-                                                                           targets = map (\(Unit index) -> units V.! index) (filter (applyUnitPredicate units pred) (map (coordToTile board) newCoords))
+                                                                           targets = map (\(Unit index) -> index) (filter (applyUnitPredicate units pred) (map (coordToTile board) newCoords))
                                                                         in targets ++ (searchTargets board units maxR pred newVisited ((Seq.drop 1 queue) Seq.>< (Seq.fromList newCoords)))
 
-unitsInRange :: GameState -> Int -> (Unit -> Bool) -> Int -> (V.Vector Unit)
+unitsInRange :: GameState -> Int -> (Unit -> Bool) -> Int -> [Int]
 unitsInRange gameState index predicate range = let Mob current = (units gameState) V.! index
-                                                in V.fromList (searchTargets (board gameState) (units gameState) range predicate (createSearchBoard (board gameState)) (Seq.singleton (position current, 0))) 
+                                                in searchTargets (board gameState) (units gameState) range predicate (createSearchBoard (board gameState)) (Seq.singleton (position current, 0))
 
 evalCondition :: GameState -> Int -> Condition -> Bool
 evalCondition gameState index (UnitCount unitDesc (Comparison comp)) = let unitPredicate = evalUnitDesc gameState index unitDesc
@@ -116,13 +116,13 @@ evalCondition gameState index (UnitCount unitDesc (Comparison comp)) = let unitP
                                                                         in comp (V.length targets)
 evalCondition gameState index (UnitRange unitDesc range) = let unitPredicate = evalUnitDesc gameState index unitDesc
                                                                targets = unitsInRange gameState index unitPredicate (evalRange gameState index range)
-                                                            in not (V.null targets)
+                                                            in not (null targets)
 evalCondition gameState index (SpecificUnitRange team name id range) = let unitPredicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
                                                                            targets = unitsInRange gameState index unitPredicate (evalRange gameState index range)
-                                                                        in not (V.null targets)
+                                                                        in not (null targets)
 evalCondition gameState index (UnitRangeCount unitDesc range (Comparison comp)) = let unitPredicate = evalUnitDesc gameState index unitDesc
                                                                                       targets = unitsInRange gameState index unitPredicate (evalRange gameState index range)
-                                                                                   in comp (V.length targets)
+                                                                                   in comp (length targets)
 evalCondition gameState index (TotalTurn (Comparison comp)) = comp (turnCount gameState)
 evalCondition gameState index (Not cond) = not (evalCondition gameState index cond)
 evalCondition gameState index (And c1 c2) = evalCondition gameState index c1 && evalCondition gameState index c2
@@ -192,56 +192,40 @@ findUnitsInHistory unitSet (index : is) = if S.member index unitSet then index :
                                                                     else findUnitsInHistory unitSet is
 
 -- TO DO: COnsiderar unificar si uso Ints o Units para las funciones
-sortByAdjective :: GameState -> Int -> [Unit] -> Adjective -> [Int]
-sortByAdjective state index searchUnits Closest = map (unitToInt state) searchUnits
+sortByAdjective :: GameState -> Int -> [Int] -> Adjective -> [Int]
+sortByAdjective _ _ searchUnits Closest = searchUnits
 sortByAdjective state index searchUnits Furthest = reverse (sortByAdjective state index searchUnits Closest)
-sortByAdjective state index searchUnits LeastInjured = map (unitToInt state) (L.sortBy (O.comparing (\(Mob unit) -> healthPoints (statBlock unit))) searchUnits)
+sortByAdjective state index searchUnits LeastInjured = L.sortBy (O.comparing (\index -> healthPoints (getStatBlock ((units state) V.! index)))) searchUnits
 sortByAdjective state index searchUnits MostInjured = reverse (sortByAdjective state index searchUnits LeastInjured)
-sortByAdjective state index searchUnits Last = let unitSet = S.fromList (map (unitToInt state) searchUnits)
-                                                   targetHistory = getTargets ((units state) V.! index)
-                                                in findUnitsInHistory unitSet targetHistory
+sortByAdjective state index searchUnits Last = let targetHistory = getTargets ((units state) V.! index)
+                                                in findUnitsInHistory (S.fromList searchUnits) targetHistory
+
+evalTarget :: GameState -> Int -> Int -> Target -> [Int]
+evalTarget _ index _ Self = [index]
+evalTarget state index range (Specific team name id) = let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
+                                                        in unitsInRange state index predicate range
+evalTarget state index range (Description adjective unitDesc) = let unitPred = evalUnitDesc state index unitDesc
+                                                                    searchResults = unitsInRange state index unitPred range
+                                                                 in sortByAdjective state index searchResults adjective 
+
 
 -- TO DO: Ver cómo estructurar las default choices. De momento si no puede hacer una acción, no hace nada.
 -- TO DO: Ver cómo unificar la evaluación de targets en las distintas acciones
 evalAction :: Int -> TurnAction -> State GameState Bool 
 evalAction _ (Move (Approach target)) = return True
-evalAction index (Standard (AttackAction target)) = case target of
-                                                         Self -> do resolveAttack index index attack
-                                                                    return True
-                                                         Specific team name id -> do gameState <- get
-                                                                                     let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
-                                                                                         attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
-                                                                                         searchResults = unitsInRange gameState index predicate attackRange
-                                                                                      in if not (V.null searchResults) then do resolveAttack index (unitToInt gameState (V.head searchResults)) attack
-                                                                                                                               return True
-                                                                                                                       else return False
-                                                         Description adjective unitDesc -> do gameState <- get
-                                                                                              let unitPred = evalUnitDesc gameState index unitDesc
-                                                                                                  attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
-                                                                                                  searchResults = unitsInRange gameState index unitPred attackRange
-                                                                                                  orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
-                                                                                               in if not (null orderedTargets) then do resolveAttack index (head orderedTargets) attack
-                                                                                                                                       return True
-                                                                                                                               else return False
-evalAction index (Full (FullAttackAction target)) = case target of
-                                                         Self -> do resolveAttack index index fullAttack
-                                                                    return True
-                                                         Specific team name id -> do gameState <- get
-                                                                                     let predicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
-                                                                                         attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
-                                                                                         searchResults = unitsInRange gameState index predicate attackRange
-                                                                                      in if not (V.null searchResults) then do resolveAttack index (unitToInt gameState (V.head searchResults)) fullAttack
-                                                                                                                               return True
-                                                                                                                       else return False
-                                                         Description adjective unitDesc -> do gameState <- get
-                                                                                              let unitPred = evalUnitDesc gameState index unitDesc
-                                                                                                  attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
-                                                                                                  searchResults = unitsInRange gameState index unitPred attackRange
-                                                                                                  orderedTargets = sortByAdjective gameState index (V.toList searchResults) adjective 
-                                                                                               in if not (null orderedTargets) then do resolveAttack index (head orderedTargets) fullAttack
-                                                                                                                                       return True
-                                                                                                                               else return False
- 
+evalAction index (Standard (AttackAction target)) = do gameState <- get
+                                                       let attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
+                                                           targets = evalTarget gameState index attackRange target
+                                                        in if not (null targets) then do resolveAttack index (head targets) attack
+                                                                                         return True
+                                                                                 else return False
+evalAction index (Full (FullAttackAction target)) = do gameState <- get
+                                                       let attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
+                                                           targets = evalTarget gameState index attackRange target
+                                                        in if not (null targets) then do resolveAttack index (head targets) fullAttack
+                                                                                         return True
+                                                                                 else return False
+
 -- TO DO: Dejar de hacer esto tail recursive cuando vea cómo meter State en todo esto.
 evalTurn :: Int -> [TurnAction] -> State GameState Bool
 evalTurn _ [] = return True
