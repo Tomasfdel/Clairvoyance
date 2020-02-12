@@ -252,3 +252,9 @@ aiStep index (Cons first second) = do gameState <- get
 aiStep index (While cond action) = do gameState <- get
                                       if evalCondition gameState index cond then aiStep index (Cons action (While cond action))
                                                                             else return (None, False)
+
+updateUnitAI :: Int -> Action -> State GameState ()
+updateUnitAI index newAI = do gameState <- get
+                              let Mob newUnit = (units gameState) V.! index
+                                  newUnits = (units gameState) V.// [(index, Mob (newUnit {ai = newAI }))]
+                               in put (gameState { units = newUnits })

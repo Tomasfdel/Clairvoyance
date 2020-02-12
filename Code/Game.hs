@@ -15,13 +15,9 @@ takeTurn index = do gameState <- get
                     if unitIsAlive ((units gameState) V.! index)
                        then case (units gameState) V.! index of
                                  Mob unit -> do (newAI, _) <- aiStep index (getAI ((units gameState) V.! index))
-                                                newState <- get
-                                                let Mob newUnit = (units newState) V.! index
-                                                    newUnits = (units newState) V.// [(index, Mob (newUnit {ai = newAI }))]
-                                                 in do put newState
-                                                       return True
+                                                updateUnitAI index newAI
+                                                return True
                        else return False
-
 
 getMobInitiative :: (V.Vector Unit) -> Int -> Int
 getMobInitiative units ind = let Mob unit = units V.! ind
