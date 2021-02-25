@@ -9,13 +9,6 @@ import qualified Data.Vector as V
 import ParserTypes
 import StatBlockGeneration
 
--- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
-
-printUnits :: V.Vector Unit -> IO ()
-printUnits units = do
-  V.mapM_ (\unit -> putStrLn (show unit)) units
-  putStrLn ""
-
 data MobUnit = MobUnit
   { name :: String,
     team :: String,
@@ -30,6 +23,15 @@ data MobUnit = MobUnit
 data Unit = Mob MobUnit
   deriving (Show)
 
+-- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
+
+-- ~ Rough print of the units vector used for debugging purposes.
+printUnits :: V.Vector Unit -> IO ()
+printUnits units = do
+  V.mapM_ (\unit -> putStrLn (show unit)) units
+  putStrLn ""
+
+-- ~ Determines if the unit is still alive.
 unitIsAlive :: Unit -> Bool
 unitIsAlive (Mob unit) = healthPoints (statBlock unit) >= 0
 
@@ -54,10 +56,12 @@ getTargets (Mob unit) = targets unit
 getStatBlock :: Unit -> StatBlock
 getStatBlock (Mob unit) = statBlock unit
 
+-- ~ Returns the initiative modifier of a unit.
 getInitiative :: Unit -> Int
 getInitiative (Mob unit) = initiative (statBlock unit)
 
--- TO DO: Unificar esto con la función de arriba, por favor
+-- TO DO: Ver si puedo unificar las duplicate functions.
+-- ~ Checks that no team names are repeated.
 duplicateTeamName :: [Team] -> S.Set String -> Maybe String
 duplicateTeamName [] _ = Nothing
 duplicateTeamName ((name, _) : ts) set =
@@ -65,11 +69,12 @@ duplicateTeamName ((name, _) : ts) set =
     then Just ("Duplicate team name " ++ name ++ ".")
     else duplicateTeamName ts (S.insert name set)
 
+-- ~ Adds an offset to the coordinates of all units in all teams.
 shiftUnits :: [Team] -> Coordinate -> [Team]
 shiftUnits teams offset =
   map
-    ( \(team, units) ->
-        ( team,
+    ( \(teamName, units) ->
+        ( teamName,
           map
             (\(name, ai, n, positions) -> (name, ai, n, map (\(col, row) -> (col + fst offset, row + snd offset)) positions))
             units
@@ -78,6 +83,8 @@ shiftUnits teams offset =
     teams
 
 -- ~ TO DO: Estas funciones se pueden simplificar haciendo un map del campo correspondiente y creando una función del tipo [String] -> (M.Map String a) -> Maybe String
+
+-- ~ Checks that all units in the team have a defined statblock.
 invalidNameInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBlock) -> Maybe String
 invalidNameInTeam [] _ = Nothing
 invalidNameInTeam ((name, _, _, _) : us) statMap =
@@ -85,6 +92,7 @@ invalidNameInTeam ((name, _, _, _) : us) statMap =
     then invalidNameInTeam us statMap
     else Just ("Unknown unit name " ++ name ++ " in team ")
 
+-- ~ Checks that all units in the team have a defined AI.
 invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String Action) -> Maybe String
 invalidAIInTeam [] _ = Nothing
 invalidAIInTeam ((_, ai, _, _) : us) aiMap =
@@ -92,6 +100,7 @@ invalidAIInTeam ((_, ai, _, _) : us) aiMap =
     then invalidAIInTeam us aiMap
     else Just ("Unknown AI name " ++ ai ++ " in team ")
 
+-- ~ Places a list of units in the board.
 placeTeamUnits :: Board -> [Coordinate] -> Int -> Either String Board
 placeTeamUnits board [] _ = Right board
 placeTeamUnits board ((col, row) : cs) index =
@@ -104,6 +113,8 @@ placeTeamUnits board ((col, row) : cs) index =
          in placeTeamUnits newBoard cs (index + 1)
       _ -> Left ("Invalid unit placement " ++ (show (col, row)) ++ " in unit ")
 
+-- ~ Place the units in the team on the board. Each unit is referenced by
+-- ~ their index in the units vector.
 placeTeam :: Board -> [(String, String, Int, [Coordinate])] -> Int -> Either String Board
 placeTeam board [] _ = Right board
 placeTeam board ((name, ai, amount, positions) : us) index =
@@ -113,6 +124,10 @@ placeTeam board ((name, ai, amount, positions) : us) index =
       Left errorMsg -> Left (errorMsg ++ name ++ " in team ")
       Right newBoard -> placeTeam newBoard us (index + length positions)
 
+-- ~ Creates a list of all the described units in the team.
+-- ~ Each unit gets an ID, which is a number that differentiates it from all the
+-- ~ other units with the same name in their team. The maximum ID for each name
+-- ~ is stored in the idMap.
 buildTeamList :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> (M.Map String Int) -> [Unit]
 buildTeamList _ _ _ [] _ = []
 buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap =
@@ -124,9 +139,12 @@ buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap =
           positions
    in units ++ buildTeamList statMap aiMap team us (M.insert name newID idMap)
 
+-- ~ Creates all the described units in the team.
 buildTeam :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> V.Vector Unit
 buildTeam statMap aiMap team units = V.fromList (buildTeamList statMap aiMap team units M.empty)
 
+-- ~ Creates and places each team's units on the board, as well as the
+-- ~ vector of all placed units.
 createUnits :: Board -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> V.Vector Unit -> Either String (Board, V.Vector Unit)
 createUnits board _ _ [] units = Right (board, units)
 createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invalidNameInTeam teamUnits statMap of
@@ -137,6 +155,7 @@ createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invali
       Left errorMsg -> Left (errorMsg ++ teamName ++ ".")
       Right newBoard -> createUnits newBoard statMap aiMap ts (units V.++ buildTeam statMap aiMap teamName teamUnits)
 
+-- ~ Creates the units given the descriptions of each team's units and AIs. Then, places them on the board.
 placeUnits :: Board -> Coordinate -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> Either String (Board, V.Vector Unit)
 placeUnits board offset units ais teams = case duplicateTeamName teams S.empty of
   Just errorMsg -> Left errorMsg

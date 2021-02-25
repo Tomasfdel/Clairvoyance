@@ -25,6 +25,7 @@ data StatTypes
   | AttacksType [AttackDesc]
   deriving (Show)
 
+-- ~ Builds a statblock from a Map that describes each of its values.
 statBlockFromMap :: M.Map String StatTypes -> StatBlock
 statBlockFromMap map =
   let (IntType healthPoints) = map M.! "HP"
@@ -42,10 +43,14 @@ statBlockFromMap map =
           fullAttack = fullAttack
         }
 
+-- ~ Checks the damage roll in an attack description is valid.
 validAttack :: AttackDesc -> Bool
 validAttack (_, _, roll) = (dieAmount roll) >= 0 && (dieValue roll) > 0
 
 -- TO DO: Limpiar esta función, por el amor de Dios
+
+-- ~ Checks all necessary fields for a statblock are present in the given stat description,
+-- ~ then builds the statblock if they are.
 buildStatBlock :: [StatInput] -> M.Map String StatTypes -> Either String StatBlock
 buildStatBlock [] map =
   if M.size map == statBlockSize
@@ -88,6 +93,7 @@ buildStatBlock ((FullAttack ns) : ss) map =
         then Left "Invalid Full Attack in unit "
         else buildStatBlock ss (M.insert "FullAttack" (AttacksType ns) map)
 
+-- ~ Creates the named statistics block for every unit.
 checkStatInputs :: [UnitInput] -> Either String [(String, StatBlock)]
 checkStatInputs [] = Right []
 checkStatInputs ((name, stats) : us) = case buildStatBlock stats M.empty of
@@ -96,6 +102,7 @@ checkStatInputs ((name, stats) : us) = case buildStatBlock stats M.empty of
     Left errorMsg -> Left errorMsg
     Right statList -> Right ((name, statBlock) : statList)
 
+-- ~ Checks that there are no duplicated unit names in the unit description list.
 duplicateUnitName :: [UnitInput] -> S.Set String -> Maybe String
 duplicateUnitName [] _ = Nothing
 duplicateUnitName ((name, _) : us) set =
@@ -103,6 +110,7 @@ duplicateUnitName ((name, _) : us) set =
     then Just ("Duplicate unit name " ++ name ++ ".")
     else duplicateUnitName us (S.insert name set)
 
+-- ~ Converts all unit stat descriptions to the appropriate statblocks.
 convertStatInputs :: [UnitInput] -> Either String (M.Map String StatBlock)
 convertStatInputs units = case duplicateUnitName units S.empty of
   Just errorMsg -> Left errorMsg

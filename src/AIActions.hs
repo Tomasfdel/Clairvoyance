@@ -14,6 +14,7 @@ import StatBlockGeneration
 import System.Random
 import UnitPlacement
 
+-- ~ Checks that there are no duplicate names in the AI actions list.
 buildAImap :: [AIInput] -> (M.Map String Action) -> Either String (M.Map String Action)
 buildAImap [] aiMap = Right aiMap
 buildAImap ((name, ai) : ais) aiMap =
@@ -21,6 +22,7 @@ buildAImap ((name, ai) : ais) aiMap =
     then Left ("Dupĺicate AI name " ++ name ++ ".")
     else buildAImap ais (M.insert name ai aiMap)
 
+-- ~ Verifies the names of the listed AI actions.
 checkAInames :: [AIInput] -> Either String (M.Map String Action)
 checkAInames ais = buildAImap ais M.empty
 
@@ -304,6 +306,7 @@ aiStep index (While cond action) = do
     then aiStep index (Cons action (While cond action))
     else return (None, False)
 
+-- ~ Updates the AI actions of the unit with the given index.
 updateUnitAI :: Int -> Action -> State GameState ()
 updateUnitAI index newAI = do
   gameState <- get
