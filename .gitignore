@@ -1,6 +1,7 @@
 *.hi
 *.o
 *.info
+*.cabal
 .stack-work/
 src/Lexer.hs
 src/Parser.hs
