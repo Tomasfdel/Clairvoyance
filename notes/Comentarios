@@ -1,0 +1,8 @@
+Posibles extensiones:
+ - Implementar eventos para comunicar cosas fuera de turno y que la IA se adapte fuera de turno.
+ - Ampliación a un conjunto de reglas más complejo para abarcar más características del juego original.
+ - Dar una interfaz de usuario para hacr algunas acciones más legibles/agregar botones o distintos quality of life features.
+ - El manual explica cómo aumentar y reducir el CR de encuentros. Se podría ampliar con un sugeridor de peleas.
+ - Habilidades pasivas, más acciones posibles para personajes.
+ - Definir aliases para conjuntos de acciones, permitir parametrizar algunos comportamientos según ciertas variables del estado del combate.
+ - Definición de una victory y loss condition (Por ejemplo, una misión de escolta tiene como éxito si se llega a tal lugar con un NPC vivo, en vez de si eliminás a todos los enemigos)

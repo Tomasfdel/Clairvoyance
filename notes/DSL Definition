@@ -1,24 +1,3 @@
-Do or consider:
-Posibilidad de parametrizar los behaviours?
-Definición del lenguaje para acciones de jugadores
-Los modificadores los debería saber el juego o lo deberían dar los personajes?
-Considerar precargar personajes por CR y sugerir encounters
-Enemy Size, Passive Abilities
-Enemy Spells & Charges
-Random Map?
-Accion INTERLEAVE?
-Combine both ranged and melee in full attack?
-Alias para un conjunto de acciones?
-Permitir explicitar un tipo de unidad en vez de un ID específico (Por ejemplo, "random Goblin" en vez de "Goblin A" o "Goblin B")
-Ampliar conditions
-Ver cómo arreglar el tipo de TurnAction, porque actualmente es un asco
-
--- Definición de Win Condition y Lose Condition --
-Cada una de ellas es una condición que se va revisando para determinar cuál es el resultado del encounter.
-
-
-
-
 -- Definición de las IAs --
 Estructuras que puedo usar:
 PASS    
