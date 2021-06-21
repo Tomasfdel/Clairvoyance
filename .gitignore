@@ -2,6 +2,7 @@
 *.o
 *.info
 *.cabal
+*.lock
 .stack-work/
 src/Lexer.hs
 src/Parser.hs
