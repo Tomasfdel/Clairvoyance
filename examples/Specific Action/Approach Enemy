@@ -1,0 +1,58 @@
+MAP{
+	Layout: Rectangle 5, 11;
+	Obstacles:;
+}
+
+UNIT Melee_Unit {
+	HP: 30;
+	Initiative: +5;
+	Speed: 4;
+	AC: 15;
+	Attack: Melee +20 3d1;
+	Full Attack: Melee +20 5d1;
+}
+
+AI Approach_self {
+    while ally count >= 1 {
+		Approach self;
+    }
+}
+
+AI Approach_dude {
+    while ally count >= 1 {
+		Approach furthest enemy;
+    }
+}
+
+
+TEAM Team1 {
+	Melee_Unit, Approach_dude x1 : (0,0);
+}
+
+TEAM Team2 {
+	Melee_Unit, Approach_dude x1 : (1,0);
+}
+
+TEAM Team3 {
+	Melee_Unit, Approach_dude x1 : (0,1);
+}
+
+TEAM Team4 {
+	Melee_Unit, Approach_dude x1 : (1,1);
+}
+
+TEAM Team5 {
+	Melee_Unit, Approach_dude x1 : (0,7);
+}
+
+TEAM Team6 {
+	Melee_Unit, Approach_dude x1 : (0,10);
+}
+
+TEAM Team7 {
+	Melee_Unit, Approach_dude x1 : (4,7);
+}
+
+TEAM Team8 {
+	Melee_Unit, Approach_dude x1 : (4,10);
+}
