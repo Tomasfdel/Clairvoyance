@@ -9,7 +9,6 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Ord as O
 import qualified Data.Set as S
 import qualified Data.Vector as V
-import Debug.Trace
 import GameState
 import ParserTypes
 import StatBlockGeneration
@@ -210,12 +209,12 @@ evalAction :: Int -> TurnAction -> State GameState Bool
 evalAction index (Move (Approach target)) = do
   gameState <- get
   let distanceMap = buildWalkingDistanceMap (board gameState) (getPosition ((units gameState) V.! index))
-   in case evaluateTarget gameState (trace (showBoard distanceMap) distanceMap) index target of
+   in case evaluateTarget gameState distanceMap index target of
         Nothing -> return False
         Just targetIndex ->
-          let pathToTarget = buildPathToTarget (getPosition ((units gameState) V.! (trace (show targetIndex) targetIndex))) distanceMap
+          let pathToTarget = buildPathToTarget (getPosition ((units gameState) V.! targetIndex)) distanceMap
               unitSpeed = speed (getStatBlock ((units gameState) V.! index))
-           in case Maybe.listToMaybe (filter (\(_, distance) -> distance <= unitSpeed) (trace (show pathToTarget) (tail pathToTarget))) of
+           in case Maybe.listToMaybe (filter (\(_, distance) -> distance <= unitSpeed) (tail pathToTarget)) of
                 Nothing -> return True
                 Just ((newCol, newRow), _) -> do
                   moveUnit index (newCol, newRow)
