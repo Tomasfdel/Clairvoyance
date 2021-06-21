@@ -10,20 +10,26 @@ data Tile
   | Unit Int
   deriving (Eq, Show)
 
-type Board = V.Vector (V.Vector Tile)
+type Board a = V.Vector (V.Vector a)
+
+-- TO DO: Consider extracting methods specific of the board to another file and leave this for strictly board generation.
+-- TO DO: This is a partial function, but I want it to be partial.
+unitIndex :: Tile -> Int
+unitIndex (Unit index) = index
+
+showBoard :: Show a => Board a -> String
+showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 
 -- ~ Rough print of the board used for debugging purposes.
-printBoard :: Board -> IO ()
-printBoard board = do
-  V.mapM_ (\row -> putStrLn (show row)) board
-  putStrLn ""
+printBoard :: Board Tile -> IO ()
+printBoard board = putStr (showBoard board)
 
 -- ~ Validates that the start and end of a wall section fit in the board dimensions.
 checkBoundaries :: (Int, Int) -> Int -> Bool
 checkBoundaries (start, end) size = and [start >= 0, start < size, end >= 0, end < size, start <= end]
 
 -- ~ Places walls in the wall section described, row by row.
-placeWall :: Board -> Obstacle -> Board
+placeWall :: Board Tile -> Obstacle -> Board Tile
 placeWall board ((colS, colE), (rowS, rowE)) =
   if rowS > rowE
     then board
@@ -34,7 +40,7 @@ placeWall board ((colS, colE), (rowS, rowE)) =
        in placeWall newBoard ((colS, colE), (rowS + 1, rowE))
 
 -- ~ Fills the board with walls on the tiles with coordinates referenced in the obstacle list.
-placeObstacles :: Board -> [Obstacle] -> Either String Board
+placeObstacles :: Board Tile -> [Obstacle] -> Either String (Board Tile)
 placeObstacles board [] = Right board
 placeObstacles board (((colS, colE), (rowS, rowE)) : os) =
   let errorMessage = "Incorrect obstacle boundaries: (" ++ show colS ++ "-" ++ show colE ++ ", " ++ show rowS ++ "-" ++ show rowE ++ ") ."
@@ -46,7 +52,7 @@ placeObstacles board (((colS, colE), (rowS, rowE)) : os) =
             else placeObstacles (placeWall board ((colS, colE), (rowS, rowE))) os
 
 -- ~ Generates an empty rectangular board of the given dimensions
-rectangleBoard :: Int -> Int -> Board
+rectangleBoard :: Int -> Int -> Board Tile
 rectangleBoard w h = V.replicate h (V.replicate w Empty)
 
 -- ~ Checks all values of the map border are greater than zero.
@@ -64,7 +70,7 @@ walkBorders ((n, DirUp) : bs) (col, row) maxValues = walkBorders bs (col, row - 
 walkBorders ((n, DirDown) : bs) (col, row) maxValues = walkBorders bs (col, row + n) (maxValues V.// [(3, max (row + n) (maxValues V.! 3))])
 
 -- ~ Walks the outline of the map while placing walls in the described tiles.
-placeBorders :: Board -> [(Int, Direction)] -> Coordinate -> Board
+placeBorders :: Board Tile -> [(Int, Direction)] -> Coordinate -> Board Tile
 placeBorders board [] _ = board
 placeBorders board ((n, DirLeft) : bs) (col, row) =
   let updates = [(x, Border) | x <- [col - n .. col]]
@@ -86,7 +92,7 @@ placeBorders board ((n, DirDown) : bs) (col, row) =
    in placeBorders newBoard bs (col, row + n)
 
 -- ~ Checks the given coordinate is a valid position on the board.
-validCoord :: Board -> Coordinate -> Bool
+validCoord :: Board a -> Coordinate -> Bool
 validCoord board (col, row) = and [col >= 0, col < (V.length (V.head board)), row >= 0, row < (V.length board)]
 
 -- ~ Returns a list of the possible adjacent coordinates of the given one.
@@ -95,7 +101,7 @@ adjacentCoords (x, y) = [(x, y -1), (x, y + 1), (x -1, y), (x + 1, y)]
 
 -- ~ Starting from a position, replaces the old tile for the new one and calls
 -- ~ the function on adjacent cells.
-floodFill :: Board -> [Coordinate] -> Tile -> Tile -> Board
+floodFill :: Board Tile -> [Coordinate] -> Tile -> Tile -> Board Tile
 floodFill board [] _ _ = board
 floodFill board ((col, row) : cs) old new =
   if validCoord board (col, row) && ((board V.! row) V.! col) == old
@@ -107,7 +113,7 @@ floodFill board ((col, row) : cs) old new =
     else floodFill board cs old new
 
 -- ~ Replaces all the tiles of the old type for the new type in the board.
-replaceTiles :: Board -> Tile -> Tile -> Board
+replaceTiles :: Board Tile -> Tile -> Tile -> Board Tile
 replaceTiles board old new = V.map (\row -> V.map (\tile -> if tile == old then new else tile) row) board
 
 -- ~ Adds an offset to te coordinates of all the listed obstacles.
@@ -115,7 +121,7 @@ offsetObstacles :: [Obstacle] -> Coordinate -> [Obstacle]
 offsetObstacles obstacles (col, row) = map (\(h, v) -> ((fst h + col, snd h + col), (fst v + row, snd v + row))) obstacles
 
 -- ~ Generates a game board based on the given description or returns an error message.
-convertBoardInput :: Map -> Either String (Board, Coordinate)
+convertBoardInput :: Map -> Either String (Board Tile, Coordinate)
 convertBoardInput (Rectangle w h, obstacles) =
   if w <= 0
     then Left "Board width is not positive."

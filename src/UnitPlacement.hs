@@ -38,6 +38,7 @@ unitIsAlive (Mob unit) = healthPoints (statBlock unit) >= 0
 getName :: Unit -> String
 getName (Mob unit) = name unit
 
+-- ~ Gets the team name of the unit.
 getTeam :: Unit -> String
 getTeam (Mob unit) = team unit
 
@@ -101,7 +102,7 @@ invalidAIInTeam ((_, ai, _, _) : us) aiMap =
     else Just ("Unknown AI name " ++ ai ++ " in team ")
 
 -- ~ Places a list of units in the board.
-placeTeamUnits :: Board -> [Coordinate] -> Int -> Either String Board
+placeTeamUnits :: Board Tile -> [Coordinate] -> Int -> Either String (Board Tile)
 placeTeamUnits board [] _ = Right board
 placeTeamUnits board ((col, row) : cs) index =
   if not (validCoord board (col, row))
@@ -115,7 +116,7 @@ placeTeamUnits board ((col, row) : cs) index =
 
 -- ~ Place the units in the team on the board. Each unit is referenced by
 -- ~ their index in the units vector.
-placeTeam :: Board -> [(String, String, Int, [Coordinate])] -> Int -> Either String Board
+placeTeam :: Board Tile -> [(String, String, Int, [Coordinate])] -> Int -> Either String (Board Tile)
 placeTeam board [] _ = Right board
 placeTeam board ((name, ai, amount, positions) : us) index =
   if amount /= length positions
@@ -145,7 +146,7 @@ buildTeam statMap aiMap team units = V.fromList (buildTeamList statMap aiMap tea
 
 -- ~ Creates and places each team's units on the board, as well as the
 -- ~ vector of all placed units.
-createUnits :: Board -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> V.Vector Unit -> Either String (Board, V.Vector Unit)
+createUnits :: Board Tile -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> V.Vector Unit -> Either String (Board Tile, V.Vector Unit)
 createUnits board _ _ [] units = Right (board, units)
 createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invalidNameInTeam teamUnits statMap of
   Just errorMsg -> Left (errorMsg ++ teamName ++ ".")
@@ -156,7 +157,7 @@ createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invali
       Right newBoard -> createUnits newBoard statMap aiMap ts (units V.++ buildTeam statMap aiMap teamName teamUnits)
 
 -- ~ Creates the units given the descriptions of each team's units and AIs. Then, places them on the board.
-placeUnits :: Board -> Coordinate -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> Either String (Board, V.Vector Unit)
+placeUnits :: Board Tile -> Coordinate -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> Either String (Board Tile, V.Vector Unit)
 placeUnits board offset units ais teams = case duplicateTeamName teams S.empty of
   Just errorMsg -> Left errorMsg
   Nothing -> createUnits board units ais (shiftUnits teams offset) V.empty

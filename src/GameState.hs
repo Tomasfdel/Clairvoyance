@@ -6,7 +6,7 @@ import qualified System.Random as R
 import UnitPlacement
 
 data GameState = GameState
-  { board :: Board,
+  { board :: Board Tile,
     units :: V.Vector Unit,
     turnCount :: Int,
     randomGen :: R.StdGen
