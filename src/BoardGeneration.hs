@@ -21,7 +21,7 @@ showBoard :: Show a => Board a -> String
 showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 
 -- ~ Rough print of the board used for debugging purposes.
-printBoard :: Board Tile -> IO ()
+printBoard :: Show a => Board a -> IO ()
 printBoard board = putStr (showBoard board)
 
 -- ~ Validates that the start and end of a wall section fit in the board dimensions.
