@@ -10,6 +10,7 @@ import qualified Data.Ord as O
 import qualified Data.Set as S
 import qualified Data.Vector as V
 import GameState
+import LineOfSight
 import ParserTypes
 import StatBlockGeneration
 import System.Random
@@ -29,10 +30,10 @@ checkAInames ais = buildAImap ais M.empty
 
 -- ~ Returns a unit predicate for the given unit description.
 evalUnitDesc :: GameState -> Int -> UnitDesc -> (Unit -> Bool)
-evalUnitDesc gameState index Ally = \u -> (getTeam u) == getTeam ((units gameState) V.! index)
-evalUnitDesc gameState index Enemy = \u -> (getTeam u) /= getTeam ((units gameState) V.! index)
-evalUnitDesc gameState index (Team name) = \u -> (getTeam u) == name
-evalUnitDesc gameState index (TeamUnit team name) = \u -> (getTeam u) == name && (getName u) == name
+evalUnitDesc gameState index Ally = \u -> unitIsAlive u && (getTeam u) == getTeam ((units gameState) V.! index)
+evalUnitDesc gameState index Enemy = \u -> unitIsAlive u && (getTeam u) /= getTeam ((units gameState) V.! index)
+evalUnitDesc gameState index (Team name) = \u -> unitIsAlive u && (getTeam u) == name
+evalUnitDesc gameState index (TeamUnit team name) = \u -> unitIsAlive u && (getTeam u) == name && (getName u) == name
 
 getAttackRange :: AttackDesc -> Int
 getAttackRange (Melee, _, _) = 1
@@ -194,7 +195,7 @@ evaluateTarget :: GameState -> Board DistanceMapTile -> Int -> Target -> Maybe I
 evaluateTarget _ _ index Self = Just index
 evaluateTarget gameState _ index (Specific team name identifier) =
   let unitIndices = V.generate (V.length (units gameState)) id
-      targetUnit = V.filter (\index -> let unit = (units gameState) V.! index in getTeam unit == team && getName unit == name && getIdentifier unit == identifier) unitIndices
+      targetUnit = V.filter (\index -> let unit = (units gameState) V.! index in unitIsAlive unit && getTeam unit == team && getName unit == name && getIdentifier unit == identifier) unitIndices
    in targetUnit V.!? 0
 evaluateTarget gameState distanceMap index (Description adjective unitDesc) =
   let unitIndices = V.generate (V.length (units gameState)) id
@@ -219,25 +220,36 @@ evalAction index (Move (Approach target)) = do
                 Just ((newCol, newRow), _) -> do
                   moveUnit index (newCol, newRow)
                   return True
-
--- evalAction index (Standard (AttackAction target)) = do
---   gameState <- get
---   let attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
---       targets = evalTarget gameState index attackRange target
---    in if not (null targets)
---         then do
---           resolveAttack index (head targets) attack
---           return True
---         else return False
--- evalAction index (Full (FullAttackAction target)) = do
---   gameState <- get
---   let attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
---       targets = evalTarget gameState index attackRange target
---    in if not (null targets)
---         then do
---           resolveAttack index (head targets) fullAttack
---           return True
---         else return False
+evalAction index (Standard (AttackAction target)) = do
+  gameState <- get
+  let attackerPosition = getPosition ((units gameState) V.! index)
+      distanceMap = buildWalkingDistanceMap (board gameState) attackerPosition
+   in case evaluateTarget gameState distanceMap index target of
+        Nothing -> return False
+        Just targetIndex ->
+          let targetPosition = getPosition ((units gameState) V.! targetIndex)
+              attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
+              validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
+           in if S.member attackerPosition validAttackPositions
+                then do
+                  resolveAttack index targetIndex attack
+                  return True
+                else return False
+evalAction index (Full (FullAttackAction target)) = do
+  gameState <- get
+  let attackerPosition = getPosition ((units gameState) V.! index)
+      distanceMap = buildWalkingDistanceMap (board gameState) attackerPosition
+   in case evaluateTarget gameState distanceMap index target of
+        Nothing -> return False
+        Just targetIndex ->
+          let targetPosition = getPosition ((units gameState) V.! targetIndex)
+              attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
+              validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
+           in if S.member attackerPosition validAttackPositions
+                then do
+                  resolveAttack index targetIndex fullAttack
+                  return True
+                else return False
 
 -- ~ Evaluates all the actions in the list and returns if all of them were successful.
 evalTurn :: Int -> [TurnAction] -> State GameState Bool
