@@ -1,0 +1,44 @@
+MAP{
+	Layout: Rectangle 12, 10;
+	Obstacles: (2, 0), (2, 6 - 9), (3 - 10, 1), (3 - 10, 5), (4, 6), (4, 8), (6, 6 - 7), (7 - 8, 7), (8, 8), (6, 9);
+}
+
+UNIT Runner {
+	HP: 10;
+	Initiative: +0;
+	Speed: 3;
+	AC: 15;
+	Attack: Melee +5 1d3;
+	Full Attack: Melee +5 1d3;
+}
+
+UNIT Archer {
+	HP: 20;
+	Initiative: +10;
+	Speed: 2;
+	AC: 15;
+	Attack: Ranged (7) +9 1d6+2;
+	Full Attack: Ranged (7) +9 1d6+2;
+}
+
+AI Run_To_Archer {
+    while enemy count >= 1 {
+	Approach closest enemy - Attack closest enemy;
+    }
+}
+
+AI Shoot {
+    while enemy count >= 1 {
+	Attack closest enemy;
+    }
+}
+
+
+
+TEAM Team1 {
+	Archer, Shoot x1 : (0,3);
+}
+
+TEAM Team2 {
+	Runner, Run_To_Archer x3 : (3, 0), (11, 3), (3, 6);
+}
