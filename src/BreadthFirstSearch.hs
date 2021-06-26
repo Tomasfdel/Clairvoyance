@@ -2,6 +2,7 @@ module BreadthFirstSearch where
 
 import BoardGeneration
 import Control.Monad.State
+import qualified Data.PSQueue as PQ
 import qualified Data.Sequence as Seq
 import qualified Data.Vector as V
 import GameState
@@ -25,7 +26,7 @@ isUnitTile _ = False
 -- ~ Checks that its possible to move to the given tile. To do so, the distance of the
 -- ~ tile to the center of the search has to be at most the max range, has to be inside
 -- ~ the map, not be already visited and not be a wall.
-findSideTile :: Board Tile -> Bool -> Coordinate -> Int -> Int -> State (Board DistanceMapTile, [Coordinate]) ()
+findSideTile :: Board Tile -> Bool -> Coordinate -> Int -> Int -> State (Board DistanceMapTile, [(Coordinate, Float)]) ()
 findSideTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visited, found) ->
   if validCoord board (col + colDiff, row + rowDiff)
     && not (isTileVisited ((visited V.! (row + rowDiff)) V.! (col + colDiff)))
@@ -37,14 +38,14 @@ findSideTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visited,
           newVisited = visited V.// [(row + rowDiff, newVisRow)]
        in if ignoreObjects
             || not (isUnitTile sideTile) && sideTile /= Wall
-            then ((), (newVisited, (col + colDiff, row + rowDiff) : found))
+            then ((), (newVisited, ((col + colDiff, row + rowDiff), currentDistance + 1) : found))
             else ((), (newVisited, found))
     else ((), (visited, found))
 
 -- ~ Does the same check as findSideTile, with two differences: the distance is 1.5
 -- ~ instead of 1, since this is a diagonal move, and both the horizontal and vertical
 -- ~ adjacent tiles have to be visitable in order to be able to move diagonally.
-findDiagonalTile :: Board Tile -> Bool -> Coordinate -> Int -> Int -> State (Board DistanceMapTile, [Coordinate]) ()
+findDiagonalTile :: Board Tile -> Bool -> Coordinate -> Int -> Int -> State (Board DistanceMapTile, [(Coordinate, Float)]) ()
 findDiagonalTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visited, found) ->
   if validCoord board (col + colDiff, row + rowDiff)
     && not (isTileVisited ((visited V.! (row + rowDiff)) V.! (col + colDiff)))
@@ -62,13 +63,13 @@ findDiagonalTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visi
           newVisRow = (visited V.! (row + rowDiff)) V.// [(col + colDiff, newDistanceTile)]
           newVisited = visited V.// [(row + rowDiff, newVisRow)]
        in if ignoreObjects || not (isUnitTile diagonalTile)
-            then ((), (newVisited, (col + colDiff, row + rowDiff) : found))
+            then ((), (newVisited, ((col + colDiff, row + rowDiff), currentDistance + 1.5) : found))
             else ((), (newVisited, found))
     else ((), (visited, found))
 
 -- ~ Returns a list of the adjacent tiles that should be explored and updates
 -- ~ the board of visited tiles.
-findNewTiles :: Board Tile -> Bool -> Coordinate -> State (Board DistanceMapTile, [Coordinate]) ()
+findNewTiles :: Board Tile -> Bool -> Coordinate -> State (Board DistanceMapTile, [(Coordinate, Float)]) ()
 findNewTiles board ignoreObjects pos = do
   findSideTile board ignoreObjects pos 0 1
   findSideTile board ignoreObjects pos 0 (-1)
@@ -100,17 +101,23 @@ buildPathToTarget (col, row) markedMap =
         then [((col, row), floor currentDistance)]
         else ((col, row), floor currentDistance) : (buildPathToTarget previousCoordinate markedMap)
 
-expandTiles :: Board Tile -> Board DistanceMapTile -> Bool -> Seq.Seq Coordinate -> Board DistanceMapTile
+
+insertTilesInQueue :: PQ.PSQ Coordinate Float -> [(Coordinate, Float)] -> PQ.PSQ Coordinate Float
+insertTilesInQueue queue [] = queue
+insertTilesInQueue queue ((coord, distance): xs) = insertTilesInQueue (PQ.insert coord distance queue) xs
+
+
+expandTiles :: Board Tile -> Board DistanceMapTile -> Bool -> PQ.PSQ Coordinate Float -> Board DistanceMapTile
 -- TO DO: This looks like it can be expanded into a state function.
 expandTiles board distanceMap ignoreObjects queue =
-  if null queue
-    then distanceMap
-    else
-      let ((), (newMap, reversedCoords)) = runState (findNewTiles board ignoreObjects (Seq.index queue 0)) (distanceMap, [])
-       in expandTiles board newMap ignoreObjects ((Seq.drop 1 queue) Seq.>< (Seq.fromList (reverse reversedCoords)))
+  case PQ.minView queue of
+    Nothing -> distanceMap
+    Just (binding, newQueue) -> 
+      let ((), (newMap, newTiles)) = runState (findNewTiles board ignoreObjects (PQ.key binding)) (distanceMap, [])
+       in expandTiles board newMap ignoreObjects (insertTilesInQueue newQueue newTiles)
 
 buildWalkingDistanceMap :: Board Tile -> Coordinate -> Board DistanceMapTile
-buildWalkingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) False (Seq.singleton startCoord)
+buildWalkingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) False (PQ.singleton startCoord 0)
 
 buildFloatingDistanceMap :: Board Tile -> Coordinate -> Board DistanceMapTile
-buildFloatingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) True (Seq.singleton startCoord)
+buildFloatingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) True (PQ.singleton startCoord 0)
