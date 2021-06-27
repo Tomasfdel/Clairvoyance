@@ -7,7 +7,12 @@ import ParserTypes
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
 
-data StatBlock = StatBlock
+data StatBlock = MobStat MobStatBlock
+               | PlayerStat PlayerStatBlock
+  deriving (Show)
+
+
+data MobStatBlock = MobStatBlock
   { healthPoints :: Int,
     initiative :: Int,
     speed :: Int,
@@ -17,8 +22,12 @@ data StatBlock = StatBlock
   }
   deriving (Show)
 
-statBlockSize :: Int
-statBlockSize = 6
+data PlayerStatBlock = PlayerStatBlock { playerInitiative :: Int, alive :: Bool }
+  deriving (Show)
+
+
+mobStatBlockSize :: Int
+mobStatBlockSize = 6
 
 data StatTypes
   = IntType Int
@@ -34,14 +43,14 @@ statBlockFromMap map =
       (IntType armorClass) = map M.! "AC"
       (AttacksType attack) = map M.! "Attack"
       (AttacksType fullAttack) = map M.! "FullAttack"
-   in StatBlock
+   in MobStat (MobStatBlock
         { healthPoints = healthPoints,
           initiative = initiative,
           speed = speed,
           armorClass = armorClass,
           attack = attack,
           fullAttack = fullAttack
-        }
+        })
 
 -- ~ Checks the damage roll in an attack description is valid.
 validAttack :: AttackDesc -> Bool
@@ -53,7 +62,7 @@ validAttack (_, _, roll) = (dieAmount roll) >= 0 && (dieValue roll) > 0
 -- ~ then builds the statblock if they are.
 buildStatBlock :: [StatInput] -> M.Map String StatTypes -> Either String StatBlock
 buildStatBlock [] map =
-  if M.size map == statBlockSize
+  if M.size map == mobStatBlockSize
     then Right (statBlockFromMap map)
     else Left "Missing statistics in unit "
 buildStatBlock ((HP n) : ss) map =
@@ -96,16 +105,25 @@ buildStatBlock ((FullAttack ns) : ss) map =
 -- ~ Creates the named statistics block for every unit.
 checkStatInputs :: [UnitInput] -> Either String [(String, StatBlock)]
 checkStatInputs [] = Right []
-checkStatInputs ((name, stats) : us) = case buildStatBlock stats M.empty of
+checkStatInputs (MobInput (name, stats) : us) = case buildStatBlock stats M.empty of
   Left errorMsg -> Left (errorMsg ++ name ++ ".")
   Right statBlock -> case checkStatInputs us of
     Left errorMsg -> Left errorMsg
     Right statList -> Right ((name, statBlock) : statList)
+checkStatInputs (PlayerInput (name, init) : us) = 
+  case checkStatInputs us of
+    Left errorMsg -> Left errorMsg
+    Right statList -> Right ((name, PlayerStat (PlayerStatBlock {playerInitiative = init, alive = True})) : statList)
+    
 
 -- ~ Checks that there are no duplicated unit names in the unit description list.
 duplicateUnitName :: [UnitInput] -> S.Set String -> Maybe String
 duplicateUnitName [] _ = Nothing
-duplicateUnitName ((name, _) : us) set =
+duplicateUnitName (MobInput (name, _) : us) set =
+  if S.member name set
+    then Just ("Duplicate unit name " ++ name ++ ".")
+    else duplicateUnitName us (S.insert name set)
+duplicateUnitName (PlayerInput (name, _) : us) set =
   if S.member name set
     then Just ("Duplicate unit name " ++ name ++ ".")
     else duplicateUnitName us (S.insert name set)

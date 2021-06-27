@@ -24,6 +24,7 @@ import ParserTypes
 	Die            { LTDie $$ }
 	Mult           { LTMult $$ }
 	Name           { LTVar $$ }
+    Player         { LTPlayer }
 	Unit           { LTUnit }
 	HP             { LTHP }
 	Initiative     { LTInitiative }
@@ -65,9 +66,6 @@ import ParserTypes
     Self           { LTSelf }
     Closest        { LTClosest }
     Furthest       { LTFurthest }
-    Most           { LTMost }
-    Least          { LTLeast }
-    Injured        { LTInjured }
     Last           { LTLast }
     Count          { LTCount }
     In             { LTIn }
@@ -111,8 +109,11 @@ IntRange : Int                                            { ($1, $1) }
 Int : Nat                                                 { $1 }
     | '-' Nat                                             { -$2 }
 
-UnitList : Unit Name '{' StatList '}'                     { [($2, $4)] }
-         | Unit Name '{' StatList '}' UnitList            { ($2, $4) : $6 }
+UnitList : UnitDeclaration                                { [$1] }
+         | UnitDeclaration UnitList                       { $1 : $2 }
+
+UnitDeclaration : Player Name '{' Initiative ':' Modifier '}'  { PlayerInput ($2, $6) }
+                | Unit Name '{' StatList '}'                   { MobInput ($2, $4) }
 
 StatList : UnitStat ';'                                   { [$1] }
          | UnitStat ';' StatList                          { $1 : $3 }
@@ -174,8 +175,6 @@ Target : Self                                             { Self }
        
 Adjective : Closest                                       { Closest }
           | Furthest                                      { Furthest } 
-          | Most Injured                                  { MostInjured }
-          | Least Injured                                 { LeastInjured }
           | Last                                          { Last }
        
 UnitDesc : Ally                                           { Ally }
@@ -217,6 +216,7 @@ TeamMemberList : TeamMember ';'                           { [$1] }
                | TeamMember ';' TeamMemberList            { $1 : $3 } 
 
 TeamMember : Name ',' Name Mult ':' CoordinateList        { ($1, $3, $4, $6) }
+           | Name Mult ':' CoordinateList                 { ($1, "", $2, $4)}
 
 CoordinateList : '(' Int ',' Int ')'                      { [($2, $4)] }
                | '(' Int ',' Int ')' ',' CoordinateList   { ($2, $4) : $7 }  

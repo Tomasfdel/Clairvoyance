@@ -122,37 +122,42 @@ rollAttack (_, mod, damage) = do
 
 checkAttackHit :: Int -> (Int, Int) -> State GameState ()
 checkAttackHit defendInd (attackRoll, damageRoll) = do
-  (Mob defender) <- gets (\gameState -> (units gameState) V.! defendInd)
-  if attackRoll >= armorClass (statBlock defender)
-    then
-      modify
-        ( \gameState ->
-            let newDefender = defender {statBlock = (statBlock defender) {healthPoints = healthPoints (statBlock defender) - damageRoll}}
-                newUnits = (units gameState) V.// [(defendInd, Mob newDefender)]
-             in gameState {units = newUnits}
-        )
-    else return ()
+  defenderUnit <- gets (\gameState -> (units gameState) V.! defendInd)
+  case defenderUnit of 
+    (Player _) -> return ()
+    (Mob defender) -> 
+      if attackRoll >= armorClass (statBlock defender)
+         then
+          modify
+            ( \gameState ->
+                let newDefender = defender {statBlock = (statBlock defender) {healthPoints = healthPoints (statBlock defender) - damageRoll}}
+                    newUnits = (units gameState) V.// [(defendInd, Mob newDefender)]
+                 in gameState {units = newUnits}
+            )
+        else return ()
 
-resolveAttack :: Int -> Int -> (StatBlock -> [AttackDesc]) -> State GameState ()
+resolveAttack :: Int -> Int -> (MobStatBlock -> [AttackDesc]) -> State GameState ()
 resolveAttack attackInd defendInd attackType = do
-  (Mob attacker) <- gets (\gameState -> (units gameState) V.! attackInd)
-  modify
-    ( \gameState ->
-        let newAttacker = attacker {targets = defendInd : (targets attacker)}
-         in gameState {units = (units gameState) V.// [(attackInd, Mob newAttacker)]}
-    )
-  attackRolls <- mapM rollAttack (attackType (statBlock attacker))
-  mapM_ (checkAttackHit defendInd) attackRolls
-  updateIfDead defendInd
+  attackerUnit <- gets (\gameState -> (units gameState) V.! attackInd)
+  case attackerUnit of
+    (Player _) -> return ()
+    (Mob attacker) -> do modify
+                           ( \gameState ->
+                               let newAttacker = attacker {targets = defendInd : (targets attacker)}
+                                in gameState {units = (units gameState) V.// [(attackInd, Mob newAttacker)]}
+                           )
+                         attackRolls <- mapM rollAttack (attackType (statBlock attacker))
+                         mapM_ (checkAttackHit defendInd) attackRolls
+                         updateIfDead defendInd
 
 moveUnit :: Int -> Coordinate -> State GameState ()
 moveUnit index (newCol, newRow) = do
-  (Mob unit) <- gets (\gameState -> (units gameState) V.! index)
-  updateBoard (position unit) Empty
+  unit <- gets (\gameState -> (units gameState) V.! index)
+  updateBoard (getPosition unit) Empty
   modify
     ( \gameState ->
-        let newUnit = unit {position = (newCol, newRow)}
-         in gameState {units = (units gameState) V.// [(index, Mob newUnit)]}
+        let newUnit = updateUnitPosition unit (newCol, newRow)
+         in gameState {units = (units gameState) V.// [(index, newUnit)]}
     )
   updateBoard (newCol, newRow) (Unit index)
 
@@ -186,8 +191,6 @@ sortByAdjective gameState distanceMap _ searchUnits Closest =
     (O.comparing (\index -> getUnitDistance distanceMap ((units gameState) V.! index)))
     (filter (\index -> isUnitReachable distanceMap ((units gameState) V.! index)) searchUnits)
 sortByAdjective gameState distanceMap index searchUnits Furthest = reverse (sortByAdjective gameState distanceMap index searchUnits Closest)
-sortByAdjective gameState _ _ searchUnits LeastInjured = L.sortBy (O.comparing (\index -> healthPoints (getStatBlock ((units gameState) V.! index)))) searchUnits
-sortByAdjective gameState distanceMap index searchUnits MostInjured = reverse (sortByAdjective gameState distanceMap index searchUnits LeastInjured)
 sortByAdjective gameState _ index searchUnits Last =
   let targetHistory = getTargets ((units gameState) V.! index)
    in findUnitsInHistory (S.fromList searchUnits) targetHistory
@@ -223,7 +226,7 @@ evalAttackAction index target isFullAttack = do
         Just targetIndex ->
           let attackFunction = if isFullAttack then fullAttack else attack
               targetPosition = getPosition ((units gameState) V.! targetIndex)
-              attackRange = minimum (map getAttackRange (attackFunction (getStatBlock ((units gameState) V.! index))))
+              attackRange = minimum (map getAttackRange (attackFunction (getMobStatBlock ((units gameState) V.! index))))
               validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
            in if S.member attackerPosition validAttackPositions
                 then do
@@ -231,7 +234,7 @@ evalAttackAction index target isFullAttack = do
                   return True
                 else
                   let possiblePosition = head (L.sortOn (\(col, row) -> tileDistance ((distanceMap V.! row) V.! col)) (S.toList validAttackPositions))
-                      unitSpeed = speed (getStatBlock ((units gameState) V.! index))
+                      unitSpeed = speed (getMobStatBlock ((units gameState) V.! index))
                       maxDistance = if isFullAttack then 2 * unitSpeed else unitSpeed
                    in do
                         moveTowardsPosition index distanceMap possiblePosition maxDistance False
@@ -245,14 +248,14 @@ evalAction index (Move (Approach target)) = do
         Nothing -> return True
         Just targetIndex ->
           let targetPosition = (getPosition ((units gameState) V.! targetIndex))
-              unitSpeed = speed (getStatBlock ((units gameState) V.! index))
+              unitSpeed = speed (getMobStatBlock ((units gameState) V.! index))
            in do
                 moveTowardsPosition index distanceMap targetPosition unitSpeed True
                 return True
 evalAction index (Move Disengage) = do
   gameState <- get
   let currentPosition = getPosition ((units gameState) V.! index)
-      unitSpeed = speed (getStatBlock ((units gameState) V.! index))
+      unitSpeed = speed (getMobStatBlock ((units gameState) V.! index))
       enemyPredicate = evalUnitDesc gameState index Enemy
       enemyPositions = V.map getPosition (V.filter enemyPredicate (units gameState))
       distanceMap = buildWalkingDistanceMap (board gameState) (V.toList enemyPositions)

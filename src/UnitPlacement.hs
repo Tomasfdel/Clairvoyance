@@ -14,13 +14,23 @@ data MobUnit = MobUnit
     team :: String,
     identifier :: Int,
     position :: Coordinate,
-    statBlock :: StatBlock,
+    statBlock :: MobStatBlock,
     ai :: Action,
     targets :: [Int]
   }
   deriving (Show)
+  
+data PlayerUnit = PlayerUnit
+  {  playerName :: String,
+     playerTeam :: String,
+     playerIdentifier :: Int,
+     playerPosition :: Coordinate,
+     playerStatBlock :: PlayerStatBlock
+  }
+  deriving (Show)
 
 data Unit = Mob MobUnit
+          | Player PlayerUnit
   deriving (Show)
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
@@ -34,19 +44,24 @@ printUnits units = do
 -- ~ Determines if the unit is still alive.
 unitIsAlive :: Unit -> Bool
 unitIsAlive (Mob unit) = healthPoints (statBlock unit) >= 0
+unitIsAlive (Player player) = alive (playerStatBlock player)
 
 getName :: Unit -> String
 getName (Mob unit) = name unit
+getName (Player player) = playerName player
 
 -- ~ Gets the team name of the unit.
 getTeam :: Unit -> String
 getTeam (Mob unit) = team unit
+getTeam (Player player) = playerTeam player
 
 getIdentifier :: Unit -> Int
 getIdentifier (Mob unit) = identifier unit
+getIdentifier (Player player) = playerIdentifier player
 
 getPosition :: Unit -> Coordinate
 getPosition (Mob unit) = position unit
+getPosition (Player player) = playerPosition player
 
 getAI :: Unit -> Action
 getAI (Mob unit) = ai unit
@@ -54,12 +69,19 @@ getAI (Mob unit) = ai unit
 getTargets :: Unit -> [Int]
 getTargets (Mob unit) = targets unit
 
-getStatBlock :: Unit -> StatBlock
-getStatBlock (Mob unit) = statBlock unit
+getMobStatBlock :: Unit -> MobStatBlock
+getMobStatBlock (Mob unit) = statBlock unit
 
 -- ~ Returns the initiative modifier of a unit.
 getInitiative :: Unit -> Int
 getInitiative (Mob unit) = initiative (statBlock unit)
+getInitiative (Player player) = playerInitiative (playerStatBlock player)
+
+
+updateUnitPosition :: Unit -> Coordinate -> Unit
+updateUnitPosition (Mob unit) newPosition = Mob (unit {position = newPosition})
+updateUnitPosition (Player player) newPosition = Player (player {playerPosition = newPosition})
+
 
 -- TO DO: Ver si puedo unificar las duplicate functions.
 -- ~ Checks that no team names are repeated.
@@ -93,13 +115,18 @@ invalidNameInTeam ((name, _, _, _) : us) statMap =
     then invalidNameInTeam us statMap
     else Just ("Unknown unit name " ++ name ++ " in team ")
 
--- ~ Checks that all units in the team have a defined AI.
-invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String Action) -> Maybe String
-invalidAIInTeam [] _ = Nothing
-invalidAIInTeam ((_, ai, _, _) : us) aiMap =
-  if M.member ai aiMap
-    then invalidAIInTeam us aiMap
-    else Just ("Unknown AI name " ++ ai ++ " in team ")
+invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBlock) -> (M.Map String Action) -> Maybe String
+invalidAIInTeam [] _ _ = Nothing
+invalidAIInTeam ((name, ai, _, _) : us) statMap aiMap =
+  case statMap M.! name of
+    MobStat _ -> if ai == "" 
+                    then Just ("Missing AI name for unit " ++ name ++ " in team ")
+                    else if M.member ai aiMap
+                            then invalidAIInTeam us statMap aiMap
+                            else Just ("Unknown AI name " ++ ai ++ " in team ")
+    PlayerStat _ -> if ai /= "" 
+                       then Just ("Player controlled unit " ++ name ++ " does not use an AI in team ")
+                       else invalidAIInTeam us statMap aiMap
 
 -- ~ Places a list of units in the board.
 placeTeamUnits :: Board Tile -> [Coordinate] -> Int -> Either String (Board Tile)
@@ -125,6 +152,13 @@ placeTeam board ((name, ai, amount, positions) : us) index =
       Left errorMsg -> Left (errorMsg ++ name ++ " in team ")
       Right newBoard -> placeTeam newBoard us (index + length positions)
 
+
+buildUnit :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> String -> String -> Int -> Coordinate -> Unit
+buildUnit statMap aiMap name team ai idNum position = 
+  case statMap M.! name of
+       MobStat statBlock -> Mob MobUnit {name = name, team = team, identifier = idNum, position = position, statBlock = statBlock, ai = aiMap M.! ai, targets = []}
+       PlayerStat statBlock -> Player PlayerUnit {playerName = name, playerTeam = team, playerIdentifier = idNum, playerPosition = position, playerStatBlock = statBlock}
+
 -- ~ Creates a list of all the described units in the team.
 -- ~ Each unit gets an ID, which is a number that differentiates it from all the
 -- ~ other units with the same name in their team. The maximum ID for each name
@@ -135,7 +169,7 @@ buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap =
   let baseID = if M.member name idMap then idMap M.! name else 1
       (newID, units) =
         L.mapAccumL
-          (\idNum pos -> (idNum + 1, Mob MobUnit {name = name, team = team, identifier = idNum, position = pos, statBlock = statMap M.! name, ai = aiMap M.! ai, targets = []}))
+          (\idNum pos -> (idNum + 1, buildUnit statMap aiMap name team ai idNum pos))
           baseID
           positions
    in units ++ buildTeamList statMap aiMap team us (M.insert name newID idMap)
@@ -150,7 +184,7 @@ createUnits :: Board Tile -> (M.Map String StatBlock) -> (M.Map String Action) -
 createUnits board _ _ [] units = Right (board, units)
 createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invalidNameInTeam teamUnits statMap of
   Just errorMsg -> Left (errorMsg ++ teamName ++ ".")
-  Nothing -> case invalidAIInTeam teamUnits aiMap of
+  Nothing -> case invalidAIInTeam teamUnits statMap aiMap of
     Just errorMsg -> Left (errorMsg ++ teamName ++ ".")
     Nothing -> case placeTeam board teamUnits (length units) of
       Left errorMsg -> Left (errorMsg ++ teamName ++ ".")

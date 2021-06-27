@@ -22,7 +22,6 @@ data DieRoll = DieRoll
 data AttackRange = Melee | Ranged Int
   deriving (Show)
 
--- TO DO: Hacer esto un record por consistencia?
 type AttackDesc = (AttackRange, Int, DieRoll)
 
 data StatInput
@@ -34,7 +33,8 @@ data StatInput
   | FullAttack [AttackDesc]
   deriving (Show)
 
-type UnitInput = (String, [StatInput])
+data UnitInput = MobInput (String, [StatInput])
+               | PlayerInput (String, Int)
 
 data Range
   = IntR Int
@@ -47,7 +47,6 @@ data Range
   deriving (Show)
 
 data IntComparison = Comparison (Int -> Bool)
-
 instance Show IntComparison where
   show (Comparison f) = "IntComparison"
 
@@ -72,8 +71,6 @@ data UnitDesc
 data Adjective
   = Closest
   | Furthest
-  | LeastInjured
-  | MostInjured
   | Last
   deriving (Show)
 

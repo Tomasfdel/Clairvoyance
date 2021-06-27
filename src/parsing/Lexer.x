@@ -23,6 +23,7 @@ tokens :-
 	"R"            { \s -> LTDirRight }
 	"D"            { \s -> LTDirDown }
 	"L"            { \s -> LTDirLeft }	
+	"PLAYER"       { \s -> LTPlayer }
 	"UNIT"         { \s -> LTUnit }
 	"HP"           { \s -> LTHP }
 	"Initiative"   { \s -> LTInitiative }
@@ -49,9 +50,6 @@ tokens :-
 	"self"         { \s -> LTSelf }
 	"closest"      { \s -> LTClosest }
 	"furthest"     { \s -> LTFurthest }
-	"most"         { \s -> LTMost }
-	"least"        { \s -> LTLeast }
-	"injured"      { \s -> LTInjured }
 	"last"         { \s -> LTLast }
 	"count"        { \s -> LTCount }
 	"in"           { \s -> LTIn }

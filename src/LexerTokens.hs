@@ -15,6 +15,7 @@ data LexerToken
   | LTMult Int
   | LTSym Char
   | LTVar String
+  | LTPlayer
   | LTUnit
   | LTHP
   | LTInitiative
@@ -40,9 +41,6 @@ data LexerToken
   | LTSelf
   | LTClosest
   | LTFurthest
-  | LTMost
-  | LTLeast
-  | LTInjured
   | LTLast
   | LTCount
   | LTIn
