@@ -205,22 +205,50 @@ evaluateTarget gameState distanceMap index (Description adjective unitDesc) =
       sortedTargets = sortByAdjective gameState distanceMap index (V.toList possibleTargets) adjective
    in Maybe.listToMaybe sortedTargets
 
--- TO DO: Ver cómo estructurar las default choices. De momento si no puede hacer una acción, no hace nada.
--- TO DO: Ver cómo unificar la evaluación de targets en las distintas acciones
+moveTowardsPosition :: Int -> Board DistanceMapTile -> Coordinate -> Int -> Bool -> State GameState ()
+moveTowardsPosition index distanceMap position maxDistance trimLast =
+  let pathToTarget = buildPathToTarget position distanceMap
+      realPath = if trimLast then tail (pathToTarget) else pathToTarget
+   in case Maybe.listToMaybe (filter (\(_, distance) -> distance <= maxDistance) realPath) of
+        Nothing -> return ()
+        Just ((newCol, newRow), _) -> moveUnit index (newCol, newRow)
+
+evalAttackAction :: Int -> Target -> Bool -> State GameState Bool
+evalAttackAction index target isFullAttack = do
+  gameState <- get
+  let attackerPosition = getPosition ((units gameState) V.! index)
+      distanceMap = buildWalkingDistanceMap (board gameState) [attackerPosition]
+   in case evaluateTarget gameState distanceMap index target of
+        Nothing -> return True
+        Just targetIndex ->
+          let attackFunction = if isFullAttack then fullAttack else attack
+              targetPosition = getPosition ((units gameState) V.! targetIndex)
+              attackRange = minimum (map getAttackRange (attackFunction (getStatBlock ((units gameState) V.! index))))
+              validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
+           in if S.member attackerPosition validAttackPositions
+                then do
+                  resolveAttack index targetIndex attackFunction
+                  return True
+                else
+                  let possiblePosition = head (L.sortOn (\(col, row) -> tileDistance ((distanceMap V.! row) V.! col)) (S.toList validAttackPositions))
+                      unitSpeed = speed (getStatBlock ((units gameState) V.! index))
+                      maxDistance = if isFullAttack then 2 * unitSpeed else unitSpeed
+                   in do
+                        moveTowardsPosition index distanceMap possiblePosition maxDistance False
+                        return False
+
 evalAction :: Int -> TurnAction -> State GameState Bool
 evalAction index (Move (Approach target)) = do
   gameState <- get
   let distanceMap = buildWalkingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
    in case evaluateTarget gameState distanceMap index target of
-        Nothing -> return False
+        Nothing -> return True
         Just targetIndex ->
-          let pathToTarget = buildPathToTarget (getPosition ((units gameState) V.! targetIndex)) distanceMap
+          let targetPosition = (getPosition ((units gameState) V.! targetIndex))
               unitSpeed = speed (getStatBlock ((units gameState) V.! index))
-           in case Maybe.listToMaybe (filter (\(_, distance) -> distance <= unitSpeed) (tail pathToTarget)) of
-                Nothing -> return True
-                Just ((newCol, newRow), _) -> do
-                  moveUnit index (newCol, newRow)
-                  return True
+           in do
+                moveTowardsPosition index distanceMap targetPosition unitSpeed True
+                return True
 evalAction index (Move Disengage) = do
   gameState <- get
   let currentPosition = getPosition ((units gameState) V.! index)
@@ -232,38 +260,9 @@ evalAction index (Move Disengage) = do
    in do
         moveUnit index newPosition
         return True
-evalAction index (Standard (AttackAction target)) = do
-  gameState <- get
-  let attackerPosition = getPosition ((units gameState) V.! index)
-      distanceMap = buildWalkingDistanceMap (board gameState) [attackerPosition]
-   in case evaluateTarget gameState distanceMap index target of
-        Nothing -> return False
-        Just targetIndex ->
-          let targetPosition = getPosition ((units gameState) V.! targetIndex)
-              attackRange = minimum (map getAttackRange (attack (getStatBlock ((units gameState) V.! index))))
-              validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
-           in if S.member attackerPosition validAttackPositions
-                then do
-                  resolveAttack index targetIndex attack
-                  return True
-                else return False
-evalAction index (Full (FullAttackAction target)) = do
-  gameState <- get
-  let attackerPosition = getPosition ((units gameState) V.! index)
-      distanceMap = buildWalkingDistanceMap (board gameState) [attackerPosition]
-   in case evaluateTarget gameState distanceMap index target of
-        Nothing -> return False
-        Just targetIndex ->
-          let targetPosition = getPosition ((units gameState) V.! targetIndex)
-              attackRange = minimum (map getAttackRange (fullAttack (getStatBlock ((units gameState) V.! index))))
-              validAttackPositions = getValidAttackPositions (board gameState) targetPosition attackRange
-           in if S.member attackerPosition validAttackPositions
-                then do
-                  resolveAttack index targetIndex fullAttack
-                  return True
-                else return False
+evalAction index (Standard (AttackAction target)) = evalAttackAction index target False
+evalAction index (Full (FullAttackAction target)) = evalAttackAction index target True
 
--- ~ Evaluates all the actions in the list and returns if all of them were successful.
 evalTurn :: Int -> [TurnAction] -> State GameState Bool
 evalTurn _ [] = return True
 evalTurn _ (Pass : as) = return True
@@ -277,8 +276,8 @@ evalTurn index (action : as) = do
 aiStep :: Int -> Action -> State GameState (Action, Bool)
 aiStep index None = return (None, False)
 aiStep index (Turn ts) = do
-  success <- evalTurn index ts
-  let newAction = if success then None else (Turn ts)
+  shouldAdvance <- evalTurn index ts
+  let newAction = if shouldAdvance then None else (Turn ts)
    in return (newAction, True)
 aiStep index (If cond tAct fAct) = do
   gameState <- get
