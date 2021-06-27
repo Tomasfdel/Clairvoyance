@@ -7,15 +7,6 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 import ParserTypes
 
-listProduct :: [a] -> [b] -> [(a, b)]
-listProduct xs ys = [(x, y) | x <- xs, y <- ys]
-
-listBoardCoordinates :: Board a -> [Coordinate]
-listBoardCoordinates board =
-  let height = V.length board
-      width = V.length (V.head board)
-   in listProduct [0 .. width - 1] [0 .. height - 1]
-
 cornerCoordinates :: Coordinate -> [Coordinate]
 cornerCoordinates (col, row) = [(col, row), (col, row + 1), (col + 1, row), (col + 1, row + 1)]
 
@@ -100,7 +91,7 @@ checkCoordLineOfSight board coord1 coord2 =
 
 getValidAttackPositions :: Board Tile -> Coordinate -> Int -> S.Set Coordinate
 getValidAttackPositions board startCoord maxRange =
-  let distanceMap = buildFloatingDistanceMap board startCoord
+  let distanceMap = buildFloatingDistanceMap board [startCoord]
       boardCoordinates = listBoardCoordinates board
       coordinatesInRange =
         filter

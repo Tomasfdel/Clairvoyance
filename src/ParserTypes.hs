@@ -83,7 +83,9 @@ data Target
   | Description Adjective UnitDesc
   deriving (Show)
 
-data MoveAction = Approach Target
+data MoveAction
+  = Approach Target
+  | Disengage
   deriving (Show)
 
 data StandardAction = AttackAction Target

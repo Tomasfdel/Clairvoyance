@@ -12,6 +12,9 @@ data Tile
 
 type Board a = V.Vector (V.Vector a)
 
+listProduct :: [a] -> [b] -> [(a, b)]
+listProduct xs ys = [(x, y) | x <- xs, y <- ys]
+
 -- TO DO: Consider extracting methods specific of the board to another file and leave this for strictly board generation.
 -- TO DO: This is a partial function, but I want it to be partial.
 unitIndex :: Tile -> Int
@@ -23,6 +26,12 @@ showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 -- ~ Rough print of the board used for debugging purposes.
 printBoard :: Show a => Board a -> IO ()
 printBoard board = putStr (showBoard board)
+
+listBoardCoordinates :: Board a -> [Coordinate]
+listBoardCoordinates board =
+  let height = V.length board
+      width = V.length (V.head board)
+   in listProduct [0 .. width - 1] [0 .. height - 1]
 
 -- ~ Validates that the start and end of a wall section fit in the board dimensions.
 checkBoundaries :: (Int, Int) -> Int -> Bool
@@ -95,9 +104,11 @@ placeBorders board ((n, DirDown) : bs) (col, row) =
 validCoord :: Board a -> Coordinate -> Bool
 validCoord board (col, row) = and [col >= 0, col < (V.length (V.head board)), row >= 0, row < (V.length board)]
 
--- ~ Returns a list of the possible adjacent coordinates of the given one.
-adjacentCoords :: Coordinate -> [Coordinate]
-adjacentCoords (x, y) = [(x, y -1), (x, y + 1), (x -1, y), (x + 1, y)]
+adjacentStraightCoords :: Coordinate -> [Coordinate]
+adjacentStraightCoords (col, row) = [(col, row -1), (col, row + 1), (col -1, row), (col + 1, row)]
+
+adjacentDiagonalCoords :: Coordinate -> [Coordinate]
+adjacentDiagonalCoords (col, row) = [(col - 1, row - 1), (col - 1, row + 1), (col + 1, row - 1), (col + 1, row + 1)]
 
 -- ~ Starting from a position, replaces the old tile for the new one and calls
 -- ~ the function on adjacent cells.
@@ -108,7 +119,7 @@ floodFill board ((col, row) : cs) old new =
     then
       let newRow = (board V.! row) V.// [(col, new)]
           newBoard = board V.// [(row, newRow)]
-          newCoords = adjacentCoords (col, row)
+          newCoords = adjacentStraightCoords (col, row)
        in floodFill newBoard (cs ++ newCoords) old new
     else floodFill board cs old new
 

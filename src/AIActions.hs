@@ -9,6 +9,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Ord as O
 import qualified Data.Set as S
 import qualified Data.Vector as V
+import Escape
 import GameState
 import LineOfSight
 import ParserTypes
@@ -64,17 +65,17 @@ evalCondition gameState index (UnitCount unitDesc (Comparison comp)) =
    in comp (V.length targets)
 evalCondition gameState index (UnitRange unitDesc range) =
   let unitPredicate = evalUnitDesc gameState index unitDesc
-      distanceMap = buildFloatingDistanceMap (board gameState) (getPosition ((units gameState) V.! index))
+      distanceMap = buildFloatingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
       targets = V.filter (\unit -> unitPredicate unit && (isUnitReachable distanceMap unit) && (getUnitDistance distanceMap unit) <= (evalRange gameState index range)) (units gameState)
    in not (V.null targets)
 evalCondition gameState index (SpecificUnitRange team name id range) =
   let unitPredicate = (\u -> getTeam u == team && getName u == name && getIdentifier u == id)
-      distanceMap = buildFloatingDistanceMap (board gameState) (getPosition ((units gameState) V.! index))
+      distanceMap = buildFloatingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
       targets = V.filter (\unit -> unitPredicate unit && (isUnitReachable distanceMap unit) && (getUnitDistance distanceMap unit) <= (evalRange gameState index range)) (units gameState)
    in not (null targets)
 evalCondition gameState index (UnitRangeCount unitDesc range (Comparison comp)) =
   let unitPredicate = evalUnitDesc gameState index unitDesc
-      distanceMap = buildFloatingDistanceMap (board gameState) (getPosition ((units gameState) V.! index))
+      distanceMap = buildFloatingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
       targets = V.filter (\unit -> unitPredicate unit && (isUnitReachable distanceMap unit) && (getUnitDistance distanceMap unit) <= (evalRange gameState index range)) (units gameState)
    in comp (length targets)
 evalCondition gameState index (TotalTurn (Comparison comp)) = comp (turnCount gameState)
@@ -209,7 +210,7 @@ evaluateTarget gameState distanceMap index (Description adjective unitDesc) =
 evalAction :: Int -> TurnAction -> State GameState Bool
 evalAction index (Move (Approach target)) = do
   gameState <- get
-  let distanceMap = buildWalkingDistanceMap (board gameState) (getPosition ((units gameState) V.! index))
+  let distanceMap = buildWalkingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
    in case evaluateTarget gameState distanceMap index target of
         Nothing -> return False
         Just targetIndex ->
@@ -220,10 +221,21 @@ evalAction index (Move (Approach target)) = do
                 Just ((newCol, newRow), _) -> do
                   moveUnit index (newCol, newRow)
                   return True
+evalAction index (Move Disengage) = do
+  gameState <- get
+  let currentPosition = getPosition ((units gameState) V.! index)
+      unitSpeed = speed (getStatBlock ((units gameState) V.! index))
+      enemyPredicate = evalUnitDesc gameState index Enemy
+      enemyPositions = V.map getPosition (V.filter enemyPredicate (units gameState))
+      distanceMap = buildWalkingDistanceMap (board gameState) (V.toList enemyPositions)
+      newPosition = findEscapePosition (board gameState) (buildEscapeMap (board gameState) distanceMap) currentPosition (fromIntegral unitSpeed)
+   in do
+        moveUnit index newPosition
+        return True
 evalAction index (Standard (AttackAction target)) = do
   gameState <- get
   let attackerPosition = getPosition ((units gameState) V.! index)
-      distanceMap = buildWalkingDistanceMap (board gameState) attackerPosition
+      distanceMap = buildWalkingDistanceMap (board gameState) [attackerPosition]
    in case evaluateTarget gameState distanceMap index target of
         Nothing -> return False
         Just targetIndex ->
@@ -238,7 +250,7 @@ evalAction index (Standard (AttackAction target)) = do
 evalAction index (Full (FullAttackAction target)) = do
   gameState <- get
   let attackerPosition = getPosition ((units gameState) V.! index)
-      distanceMap = buildWalkingDistanceMap (board gameState) attackerPosition
+      distanceMap = buildWalkingDistanceMap (board gameState) [attackerPosition]
    in case evaluateTarget gameState distanceMap index target of
         Nothing -> return False
         Just targetIndex ->

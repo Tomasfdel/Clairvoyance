@@ -34,6 +34,7 @@ data LexerToken
   | LTAnd
   | LTOr
   | LTApproach
+  | LTDisengage
   | LTAlly
   | LTEnemy
   | LTSelf

@@ -23,6 +23,25 @@ isUnitTile :: Tile -> Bool
 isUnitTile (Unit _) = True
 isUnitTile _ = False
 
+isValidStraightMovement :: Board Tile -> Coordinate -> Coordinate -> Bool
+isValidStraightMovement board (startCol, startRow) (endCol, endRow) =
+  ( startCol == endCol && abs (startRow - endRow) == 1
+      || startRow == endRow && abs (startCol - endCol) == 1
+  )
+    && (board V.! endRow) V.! endCol == Empty
+
+isValidDiagonalMovement :: Board Tile -> Coordinate -> Coordinate -> Bool
+isValidDiagonalMovement board (startCol, startRow) (endCol, endRow) =
+  abs (startCol - endCol) == 1 && abs (startRow - endRow) == 1
+    && (board V.! endRow) V.! endCol == Empty
+    && (board V.! startRow) V.! endCol == Empty
+    && (board V.! endRow) V.! startCol == Empty
+
+isValidMovement :: Board Tile -> Coordinate -> Coordinate -> Bool
+isValidMovement board start end =
+  validCoord board start && validCoord board end
+    && (isValidStraightMovement board start end || isValidDiagonalMovement board start end)
+
 -- ~ Checks that its possible to move to the given tile. To do so, the distance of the
 -- ~ tile to the center of the search has to be at most the max range, has to be inside
 -- ~ the map, not be already visited and not be a wall.
@@ -81,18 +100,23 @@ findNewTiles board ignoreObjects pos = do
   findDiagonalTile board ignoreObjects pos (-1) (-1)
   return ()
 
+setSearchStartTiles :: Board DistanceMapTile -> [Coordinate] -> Board DistanceMapTile
+setSearchStartTiles distanceMap [] = distanceMap
+setSearchStartTiles distanceMap ((col, row) : cs) =
+  let searchStartTile = ((-1, -1), 0)
+      updatedRow = (distanceMap V.! row) V.// [(col, searchStartTile)]
+      updatedMap = distanceMap V.// [(row, updatedRow)]
+   in setSearchStartTiles updatedMap cs
+
 -- ~ Creates a board with the same dimensions as the given one, but full of -1 values,
 -- ~ except in the given position where there is a 0.
-createSearchBoard :: Board Tile -> Coordinate -> Board DistanceMapTile
-createSearchBoard board (startCol, startRow) =
+createSearchBoard :: Board Tile -> [Coordinate] -> Board DistanceMapTile
+createSearchBoard board startCoords =
   let height = V.length board
       width = V.length (V.head board)
-      baseDistanceTile = ((-1, -1), 0)
       emptyDistanceTile = ((-1, -1), -1)
       baseBoard = V.replicate height (V.replicate width emptyDistanceTile)
-      updatedRow = (baseBoard V.! startRow) V.// [(startCol, baseDistanceTile)]
-      updatedBoard = baseBoard V.// [(startRow, updatedRow)]
-   in updatedBoard
+   in setSearchStartTiles baseBoard startCoords
 
 buildPathToTarget :: Coordinate -> Board DistanceMapTile -> [(Coordinate, Int)]
 buildPathToTarget (col, row) markedMap =
@@ -101,23 +125,21 @@ buildPathToTarget (col, row) markedMap =
         then [((col, row), floor currentDistance)]
         else ((col, row), floor currentDistance) : (buildPathToTarget previousCoordinate markedMap)
 
-
 insertTilesInQueue :: PQ.PSQ Coordinate Float -> [(Coordinate, Float)] -> PQ.PSQ Coordinate Float
 insertTilesInQueue queue [] = queue
-insertTilesInQueue queue ((coord, distance): xs) = insertTilesInQueue (PQ.insert coord distance queue) xs
-
+insertTilesInQueue queue ((coord, distance) : xs) = insertTilesInQueue (PQ.insert coord distance queue) xs
 
 expandTiles :: Board Tile -> Board DistanceMapTile -> Bool -> PQ.PSQ Coordinate Float -> Board DistanceMapTile
 -- TO DO: This looks like it can be expanded into a state function.
 expandTiles board distanceMap ignoreObjects queue =
   case PQ.minView queue of
     Nothing -> distanceMap
-    Just (binding, newQueue) -> 
+    Just (binding, newQueue) ->
       let ((), (newMap, newTiles)) = runState (findNewTiles board ignoreObjects (PQ.key binding)) (distanceMap, [])
        in expandTiles board newMap ignoreObjects (insertTilesInQueue newQueue newTiles)
 
-buildWalkingDistanceMap :: Board Tile -> Coordinate -> Board DistanceMapTile
-buildWalkingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) False (PQ.singleton startCoord 0)
+buildWalkingDistanceMap :: Board Tile -> [Coordinate] -> Board DistanceMapTile
+buildWalkingDistanceMap board startCoords = expandTiles board (createSearchBoard board startCoords) False (PQ.fromList (map (\coord -> coord PQ.:-> 0) startCoords))
 
-buildFloatingDistanceMap :: Board Tile -> Coordinate -> Board DistanceMapTile
-buildFloatingDistanceMap board startCoord = expandTiles board (createSearchBoard board startCoord) True (PQ.singleton startCoord 0)
+buildFloatingDistanceMap :: Board Tile -> [Coordinate] -> Board DistanceMapTile
+buildFloatingDistanceMap board startCoords = expandTiles board (createSearchBoard board startCoords) True (PQ.fromList (map (\coord -> coord PQ.:-> 0) startCoords))
