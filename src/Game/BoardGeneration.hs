@@ -47,16 +47,16 @@ placeWall board ((colS, colE), (rowS, rowE)) =
        in placeWall newBoard ((colS, colE), (rowS + 1, rowE))
 
 -- ~ Fills the board with walls on the tiles with coordinates referenced in the obstacle list.
-placeObstacles :: Board Tile -> [Obstacle] -> Either String (Board Tile)
-placeObstacles board [] = Right board
-placeObstacles board (((colS, colE), (rowS, rowE)) : os) =
-  let errorMessage = "Incorrect obstacle boundaries: (" ++ show colS ++ "-" ++ show colE ++ ", " ++ show rowS ++ "-" ++ show rowE ++ ") ."
+placeObstacles :: Board Tile -> Coordinate -> [Obstacle] -> Either String (Board Tile)
+placeObstacles board _ [] = Right board
+placeObstacles board (colOffset, rowOffset) (((colS, colE), (rowS, rowE)) : os) =
+  let errorMessage = "Incorrect obstacle boundaries: (" ++ show (colS - colOffset) ++ "-" ++ show (colE - colOffset) ++ ", " ++ show (rowS - rowOffset) ++ "-" ++ show (rowE - rowOffset) ++ ") ."
    in if not (checkBoundaries (colS, colE) (V.length (V.head board)))
         then Left errorMessage
         else
           if not (checkBoundaries (rowS, rowE) (V.length board))
             then Left errorMessage
-            else placeObstacles (placeWall board ((colS, colE), (rowS, rowE))) os
+            else placeObstacles (placeWall board ((colS, colE), (rowS, rowE))) (colOffset, rowOffset) os
 
 -- ~ Generates an empty rectangular board of the given dimensions.
 rectangleBoard :: Int -> Int -> Board Tile
@@ -139,7 +139,7 @@ convertBoardInput (Rectangle w h, obstacles) =
     else
       if h <= 0
         then Left "Board height is not positive."
-        else case placeObstacles (rectangleBoard w h) obstacles of
+        else case placeObstacles (rectangleBoard w h) (0, 0) obstacles of
           Left errorMsg -> Left errorMsg
           Right board -> Right (board, (0, 0))
 convertBoardInput (Outline borders, obstacles) =
@@ -158,6 +158,6 @@ convertBoardInput (Outline borders, obstacles) =
             wallBoard = floodFill borderBoard [(0, 0)] Empty Wall
             finalBoard = replaceTiles wallBoard Border Empty
             newObstacles = offsetObstacles obstacles originOffset
-         in case placeObstacles finalBoard newObstacles of
+         in case placeObstacles finalBoard originOffset newObstacles of
               Left errorMsg -> Left errorMsg
               Right board -> Right (board, originOffset)
