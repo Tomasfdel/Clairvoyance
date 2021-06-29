@@ -19,18 +19,19 @@ data MobUnit = MobUnit
     targets :: [Int]
   }
   deriving (Show)
-  
+
 data PlayerUnit = PlayerUnit
-  {  playerName :: String,
-     playerTeam :: String,
-     playerIdentifier :: Int,
-     playerPosition :: Coordinate,
-     playerStatBlock :: PlayerStatBlock
+  { playerName :: String,
+    playerTeam :: String,
+    playerIdentifier :: Int,
+    playerPosition :: Coordinate,
+    playerStatBlock :: PlayerStatBlock
   }
   deriving (Show)
 
-data Unit = Mob MobUnit
-          | Player PlayerUnit
+data Unit
+  = Mob MobUnit
+  | Player PlayerUnit
   deriving (Show)
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
@@ -77,11 +78,13 @@ getInitiative :: Unit -> Int
 getInitiative (Mob unit) = initiative (statBlock unit)
 getInitiative (Player player) = playerInitiative (playerStatBlock player)
 
-
 updateUnitPosition :: Unit -> Coordinate -> Unit
 updateUnitPosition (Mob unit) newPosition = Mob (unit {position = newPosition})
 updateUnitPosition (Player player) newPosition = Player (player {playerPosition = newPosition})
 
+updateUnitDead :: Unit -> Unit
+updateUnitDead (Mob unit) = Mob (unit {statBlock = (statBlock unit) {healthPoints = -1}})
+updateUnitDead (Player player) = Player (player {playerStatBlock = (playerStatBlock player) {alive = False}})
 
 -- TO DO: Ver si puedo unificar las duplicate functions.
 -- ~ Checks that no team names are repeated.
@@ -119,14 +122,17 @@ invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBl
 invalidAIInTeam [] _ _ = Nothing
 invalidAIInTeam ((name, ai, _, _) : us) statMap aiMap =
   case statMap M.! name of
-    MobStat _ -> if ai == "" 
-                    then Just ("Missing AI name for unit " ++ name ++ " in team ")
-                    else if M.member ai aiMap
-                            then invalidAIInTeam us statMap aiMap
-                            else Just ("Unknown AI name " ++ ai ++ " in team ")
-    PlayerStat _ -> if ai /= "" 
-                       then Just ("Player controlled unit " ++ name ++ " does not use an AI in team ")
-                       else invalidAIInTeam us statMap aiMap
+    MobStat _ ->
+      if ai == ""
+        then Just ("Missing AI name for unit " ++ name ++ " in team ")
+        else
+          if M.member ai aiMap
+            then invalidAIInTeam us statMap aiMap
+            else Just ("Unknown AI name " ++ ai ++ " in team ")
+    PlayerStat _ ->
+      if ai /= ""
+        then Just ("Player controlled unit " ++ name ++ " does not use an AI in team ")
+        else invalidAIInTeam us statMap aiMap
 
 -- ~ Places a list of units in the board.
 placeTeamUnits :: Board Tile -> [Coordinate] -> Int -> Either String (Board Tile)
@@ -152,12 +158,11 @@ placeTeam board ((name, ai, amount, positions) : us) index =
       Left errorMsg -> Left (errorMsg ++ name ++ " in team ")
       Right newBoard -> placeTeam newBoard us (index + length positions)
 
-
 buildUnit :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> String -> String -> Int -> Coordinate -> Unit
-buildUnit statMap aiMap name team ai idNum position = 
+buildUnit statMap aiMap name team ai idNum position =
   case statMap M.! name of
-       MobStat statBlock -> Mob MobUnit {name = name, team = team, identifier = idNum, position = position, statBlock = statBlock, ai = aiMap M.! ai, targets = []}
-       PlayerStat statBlock -> Player PlayerUnit {playerName = name, playerTeam = team, playerIdentifier = idNum, playerPosition = position, playerStatBlock = statBlock}
+    MobStat statBlock -> Mob MobUnit {name = name, team = team, identifier = idNum, position = position, statBlock = statBlock, ai = aiMap M.! ai, targets = []}
+    PlayerStat statBlock -> Player PlayerUnit {playerName = name, playerTeam = team, playerIdentifier = idNum, playerPosition = position, playerStatBlock = statBlock}
 
 -- ~ Creates a list of all the described units in the team.
 -- ~ Each unit gets an ID, which is a number that differentiates it from all the

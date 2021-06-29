@@ -2,6 +2,7 @@ module Game where
 
 import AIActions
 import BoardGeneration
+import CommandHandler
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
@@ -56,8 +57,10 @@ takeTurn index = do
         (newAI, _) <- aiStep index (getAI ((units gameState) V.! index))
         updateUnitAI index newAI
         return True
+      Player player -> return True
     else return False
 
+-- ~ TO DO: Promote this to use StateT IO so I can make it monadic.
 -- ~ Determines which unit should take its turn, and modifies the game state after it.
 turnHandler :: GameState -> (V.Vector Int) -> Int -> IO ()
 turnHandler gameState initiative index =
@@ -66,13 +69,13 @@ turnHandler gameState initiative index =
       newTurn = if newIndex == 0 then turnCount gameState + 1 else turnCount gameState
    in if playedTurn
         then do
-          _ <- getLine
           putStrLn ""
           putStrLn ""
           printGameState newState
           putStrLn ("Initiative index: " ++ (show index))
           putStrLn ("Unit index: " ++ (show (initiative V.! index)))
-          turnHandler (newState {turnCount = newTurn}) initiative newIndex
+          newerState <- execStateT commandInput newState
+          turnHandler (newerState {turnCount = newTurn}) initiative newIndex
         else turnHandler (newState {turnCount = newTurn}) initiative newIndex
 
 -- ~ TO DO: Debería reorganizar todas las funciones de una manera más lógica y en carpetas, eventualmente.
@@ -87,4 +90,5 @@ playGame board units = do
   let gameState = GameState {board = board, units = units, turnCount = 1, randomGen = randomGen}
    in do
         printGameState gameState
-        turnHandler gameState init 0
+        newState <- execStateT commandInput gameState
+        turnHandler newState init 0

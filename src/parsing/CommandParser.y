@@ -34,8 +34,8 @@ import CommandParserTypes
 %%
 
 Command : Next                                { Next }
-        | Move Movement                       { Move $2 }
-        | Attack Target                       { Attack $2 }
+        | Move Target Movement                { Move $2 $3 }
+        | Attack Target Nat Nat               { Attack $2 $3 $4 }
         | Kill Target                         { Kill $2 }
 
 Target : Nat                                  { Index $1 }
