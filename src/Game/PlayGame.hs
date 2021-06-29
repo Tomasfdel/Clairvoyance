@@ -34,7 +34,7 @@ regroupInitiatives rolls =
    in map (map fst) tupleGroups
 
 -- ~ Reorders unit indices in descending order of their initiative rolls,
--- ~ breaking ties with a consecutive roll among tied units.
+-- ~ breaking ties with another roll among tied units.
 initiativeReorder :: (V.Vector Unit) -> [Int] -> IO ([Int])
 initiativeReorder _ [] = return []
 initiativeReorder _ [n] = return [n]
@@ -64,6 +64,7 @@ takeTurn index = do
 
 -- ~ TO DO: Promote this to use StateT IO so I can make it monadic.
 -- ~ Determines which unit should take its turn, and modifies the game state after it.
+-- ~ After each unit's turn, it sets up a console to allow the players to input commands.
 turnHandler :: GameState -> (V.Vector Int) -> Int -> IO ()
 turnHandler gameState initiative index =
   let (playedTurn, newState) = runState (takeTurn (initiative V.! index)) gameState
@@ -80,7 +81,7 @@ turnHandler gameState initiative index =
           turnHandler (newerState {turnCount = newTurn}) initiative newIndex
         else turnHandler (newState {turnCount = newTurn}) initiative newIndex
 
--- ~ Sets the initiative order for units and starts first turn.
+-- ~ Sets the initiative order for units and starts the first turn.
 playGame :: Board Tile -> (V.Vector Unit) -> IO ()
 playGame board units = do
   init <- initiativeRoll units
@@ -93,6 +94,8 @@ playGame board units = do
         newState <- execStateT commandInput gameState
         turnHandler newState init 0
 
+-- ~ Parses the input file contents and creates all the necessary objects
+-- ~ to handle the game state.
 setupGame :: String -> Either String (Board Tile, V.Vector Unit)
 setupGame input =
   let (boardIn, unitIn, aiIn, teamIn) = parse (alexScanTokens input)

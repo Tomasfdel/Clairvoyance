@@ -12,9 +12,11 @@ data Tile
 
 type Board a = V.Vector (V.Vector a)
 
+-- ~ Returns a list of pairs of each member of the first list with each member of the second one.
 listProduct :: [a] -> [b] -> [(a, b)]
 listProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
+-- ~ Roughly converts the given board to a string.
 showBoard :: Show a => Board a -> String
 showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 
@@ -22,6 +24,7 @@ showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 printBoard :: Show a => Board a -> IO ()
 printBoard board = putStr (showBoard board)
 
+-- ~ Returns a list of all the coordinates of the given board.
 listBoardCoordinates :: Board a -> [Coordinate]
 listBoardCoordinates board =
   let height = V.length board
@@ -55,7 +58,7 @@ placeObstacles board (((colS, colE), (rowS, rowE)) : os) =
             then Left errorMessage
             else placeObstacles (placeWall board ((colS, colE), (rowS, rowE))) os
 
--- ~ Generates an empty rectangular board of the given dimensions
+-- ~ Generates an empty rectangular board of the given dimensions.
 rectangleBoard :: Int -> Int -> Board Tile
 rectangleBoard w h = V.replicate h (V.replicate w Empty)
 
@@ -99,9 +102,11 @@ placeBorders board ((n, DirDown) : bs) (col, row) =
 validCoord :: Board a -> Coordinate -> Bool
 validCoord board (col, row) = and [col >= 0, col < (V.length (V.head board)), row >= 0, row < (V.length board)]
 
+-- ~ Returns the coordinates above, below and to the left and right of the given one.
 adjacentStraightCoords :: Coordinate -> [Coordinate]
 adjacentStraightCoords (col, row) = [(col, row -1), (col, row + 1), (col -1, row), (col + 1, row)]
 
+-- ~ Return the four diagonally adjacent coordinates of the given one.
 adjacentDiagonalCoords :: Coordinate -> [Coordinate]
 adjacentDiagonalCoords (col, row) = [(col - 1, row - 1), (col - 1, row + 1), (col + 1, row - 1), (col + 1, row + 1)]
 
@@ -122,7 +127,7 @@ floodFill board ((col, row) : cs) old new =
 replaceTiles :: Board Tile -> Tile -> Tile -> Board Tile
 replaceTiles board old new = V.map (\row -> V.map (\tile -> if tile == old then new else tile) row) board
 
--- ~ Adds an offset to te coordinates of all the listed obstacles.
+-- ~ Adds an offset to the coordinates of all the listed obstacles.
 offsetObstacles :: [Obstacle] -> Coordinate -> [Obstacle]
 offsetObstacles obstacles (col, row) = map (\(h, v) -> ((fst h + col, snd h + col), (fst v + row, snd v + row))) obstacles
 

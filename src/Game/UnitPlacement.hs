@@ -40,34 +40,40 @@ printUnits units = do
   V.mapM_ (\unit -> putStrLn (show unit)) units
   putStrLn ""
 
--- ~ Determines if the unit is still alive.
+-- ~ Determines if a unit is still alive.
 unitIsAlive :: Unit -> Bool
 unitIsAlive (Mob unit) = healthPoints (statBlock unit) >= 0
 unitIsAlive (Player player) = alive (playerStatBlock player)
 
+-- ~ Returns the name of a unit.
 getName :: Unit -> String
 getName (Mob unit) = name unit
 getName (Player player) = playerName player
 
--- ~ Gets the team name of the unit.
+-- ~ Returns the team name of a unit.
 getTeam :: Unit -> String
 getTeam (Mob unit) = team unit
 getTeam (Player player) = playerTeam player
 
+-- ~ Returns the identifier of a unit.
 getIdentifier :: Unit -> Int
 getIdentifier (Mob unit) = identifier unit
 getIdentifier (Player player) = playerIdentifier player
 
+-- ~ Returns the position on the board of a unit.
 getPosition :: Unit -> Coordinate
 getPosition (Mob unit) = position unit
 getPosition (Player player) = playerPosition player
 
+-- ~ Returns the action sequence of a non-playable unit.
 getAI :: Unit -> Action
 getAI (Mob unit) = ai unit
 
+-- ~ Returns the target history of a non-playable unit.
 getTargets :: Unit -> [Int]
 getTargets (Mob unit) = targets unit
 
+-- ~ Returns the statblock of a non-playable unit.
 getMobStatBlock :: Unit -> MobStatBlock
 getMobStatBlock (Mob unit) = statBlock unit
 
@@ -76,10 +82,12 @@ getInitiative :: Unit -> Int
 getInitiative (Mob unit) = initiative (statBlock unit)
 getInitiative (Player player) = playerInitiative (playerStatBlock player)
 
+-- ~ Updates the position of a unit in the board.
 updateUnitPosition :: Unit -> Coordinate -> Unit
 updateUnitPosition (Mob unit) newPosition = Mob (unit {position = newPosition})
 updateUnitPosition (Player player) newPosition = Player (player {playerPosition = newPosition})
 
+-- ~ Sets a unit as dead.
 updateUnitDead :: Unit -> Unit
 updateUnitDead (Mob unit) = Mob (unit {statBlock = (statBlock unit) {healthPoints = -1}})
 updateUnitDead (Player player) = Player (player {playerStatBlock = (playerStatBlock player) {alive = False}})
@@ -125,6 +133,7 @@ invalidNameInTeam ((name, _, _, _) : us) statMap =
     then invalidNameInTeam us statMap
     else Just ("Unknown unit name " ++ name ++ " in team ")
 
+-- ~ Checks if all non-playable units in a team have an existing AI assigned.
 invalidAIInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBlock) -> (M.Map String Action) -> Maybe String
 invalidAIInTeam [] _ _ = Nothing
 invalidAIInTeam ((name, ai, _, _) : us) statMap aiMap =
@@ -165,6 +174,7 @@ placeTeam board ((name, ai, amount, positions) : us) index =
       Left errorMsg -> Left (errorMsg ++ name ++ " in team ")
       Right newBoard -> placeTeam newBoard us (index + length positions)
 
+-- ~ Builds a unit from all the necessary values.
 buildUnit :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> String -> String -> Int -> Coordinate -> Unit
 buildUnit statMap aiMap name team ai idNum position =
   case statMap M.! name of
@@ -190,8 +200,8 @@ buildTeamList statMap aiMap team ((name, ai, amount, positions) : us) idMap =
 buildTeam :: (M.Map String StatBlock) -> (M.Map String Action) -> String -> [(String, String, Int, [Coordinate])] -> V.Vector Unit
 buildTeam statMap aiMap team units = V.fromList (buildTeamList statMap aiMap team units M.empty)
 
--- ~ Creates and places each team's units on the board, as well as the
--- ~ vector of all placed units.
+-- ~ Creates and places each team's units on the board, returning it
+-- ~ as well as the vector of all placed units.
 createUnits :: Board Tile -> (M.Map String StatBlock) -> (M.Map String Action) -> [Team] -> V.Vector Unit -> Either String (Board Tile, V.Vector Unit)
 createUnits board _ _ [] units = Right (board, units)
 createUnits board statMap aiMap ((teamName, teamUnits) : ts) units = case invalidNameInTeam teamUnits statMap of

@@ -20,11 +20,11 @@ data MobStatBlock = MobStatBlock
   }
   deriving (Show)
 
-data PlayerStatBlock = PlayerStatBlock {playerInitiative :: Int, alive :: Bool}
-  deriving (Show)
-
 mobStatBlockSize :: Int
 mobStatBlockSize = 6
+
+data PlayerStatBlock = PlayerStatBlock {playerInitiative :: Int, alive :: Bool}
+  deriving (Show)
 
 data StatTypes
   = IntType Int
