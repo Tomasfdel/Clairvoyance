@@ -24,10 +24,12 @@ evalUnitDesc gameState index Enemy = \u -> unitIsAlive u && (getTeam u) /= getTe
 evalUnitDesc gameState index (Team name) = \u -> unitIsAlive u && (getTeam u) == name
 evalUnitDesc gameState index (TeamUnit team name) = \u -> unitIsAlive u && (getTeam u) == name && (getName u) == name
 
+-- ~ Returns the range of a given attack.
 getAttackRange :: AttackDesc -> Int
 getAttackRange (Melee, _, _) = 1
 getAttackRange (Ranged r, _, _) = r
 
+-- ~ Evaluates a range description and returns the integer value it represents.
 evalRange :: GameState -> Int -> Range -> Int
 evalRange gameState index (IntR n) = n
 evalRange gameState index MeleeR = 1
@@ -45,7 +47,7 @@ evalRange gameState index SpeedR =
 evalRange gameState index (Sum r1 r2) = (evalRange gameState index r1) + (evalRange gameState index r2)
 evalRange gameState index (Prod r n) = (evalRange gameState index r) * n
 
--- ~ Checks the given condition the current state of the game.
+-- ~ Checks the given condition in the current state of the game.
 evalCondition :: GameState -> Int -> Condition -> Bool
 evalCondition gameState index (UnitCount unitDesc (Comparison comp)) =
   let unitPredicate = evalUnitDesc gameState index unitDesc
@@ -71,17 +73,20 @@ evalCondition gameState index (Not cond) = not (evalCondition gameState index co
 evalCondition gameState index (And c1 c2) = evalCondition gameState index c1 && evalCondition gameState index c2
 evalCondition gameState index (Or c1 c2) = evalCondition gameState index c1 || evalCondition gameState index c2
 
+-- ~ Rolls a random number between the given min and max values.
 rollDie :: Int -> Int -> State GameState Int
 rollDie minVal maxVal = state $ \gameState ->
   let generator = randomGen gameState
       (result, newGen) = randomR (minVal, maxVal) generator
    in (result, gameState {randomGen = newGen})
 
+-- ~ Rolls the dice of a roll description and adds the corresponding modifier.
 rollDice :: DieRoll -> State GameState Int
 rollDice dieRoll = do
   results <- sequence (replicate (dieAmount dieRoll) (rollDie 1 (dieValue dieRoll)))
   return (modifier dieRoll + sum results)
 
+-- ~ Changes the state board in the given coordinate for the new given tile.
 updateBoard :: Coordinate -> Tile -> State GameState ()
 updateBoard (col, row) newTile =
   modify
@@ -91,6 +96,7 @@ updateBoard (col, row) newTile =
          in gameState {board = newBoard}
     )
 
+-- ~ Updates the board if a certain unit is dead.
 updateIfDead :: Int -> State GameState ()
 updateIfDead index = do
   gameState <- get
@@ -101,12 +107,15 @@ updateIfDead index = do
           return ()
         else return ()
 
+-- ~ Rolls the attack and damage of an attack, given its description.
 rollAttack :: AttackDesc -> State GameState (Int, Int)
 rollAttack (_, mod, damage) = do
   attackRoll <- rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = mod})
   damageRoll <- rollDice damage
   return (attackRoll, max 1 damageRoll)
 
+-- ~ Checks if an attack (described by its attack and damage rolls) hits a given
+-- ~ unit, and updates its health points in case it does.
 checkAttackHit :: Int -> (Int, Int) -> State GameState ()
 checkAttackHit defendInd (attackRoll, damageRoll) = do
   defenderUnit <- gets (\gameState -> (units gameState) V.! defendInd)
@@ -123,6 +132,8 @@ checkAttackHit defendInd (attackRoll, damageRoll) = do
             )
         else return ()
 
+-- ~ Rolls all attacks from the attacking unit to the defending unit, and updates
+-- ~ the second one in case it's dead after them.
 resolveAttack :: Int -> Int -> (MobStatBlock -> [AttackDesc]) -> State GameState ()
 resolveAttack attackInd defendInd attackType = do
   attackerUnit <- gets (\gameState -> (units gameState) V.! attackInd)
@@ -138,6 +149,7 @@ resolveAttack attackInd defendInd attackType = do
       mapM_ (checkAttackHit defendInd) attackRolls
       updateIfDead defendInd
 
+-- ~ Moves the given unit to the given coordinate.
 moveUnit :: Int -> Coordinate -> State GameState ()
 moveUnit index (newCol, newRow) = do
   unit <- gets (\gameState -> (units gameState) V.! index)
@@ -149,23 +161,8 @@ moveUnit index (newCol, newRow) = do
     )
   updateBoard (newCol, newRow) (Unit index)
 
-unitToInt :: GameState -> Unit -> Int
-unitToInt state (Mob unit) =
-  let (col, row) = position unit
-      Unit index = ((board state) V.! row) V.! col
-   in index
-
-intToUnit :: GameState -> Int -> Unit
-intToUnit state index = (units state) V.! index
-
-getUnitDistance :: Board DistanceMapTile -> Unit -> Int
-getUnitDistance distanceMap unit =
-  let (col, row) = getPosition unit
-   in floor (snd ((distanceMap V.! row) V.! col))
-
-isUnitReachable :: Board DistanceMapTile -> Unit -> Bool
-isUnitReachable distanceMap unit = (getUnitDistance distanceMap unit) >= 0
-
+-- ~ Returns a list of all unit indices in the given set that are present
+-- ~ in the given target history.
 findUnitsInHistory :: (S.Set Int) -> [Int] -> [Int]
 findUnitsInHistory _ [] = []
 findUnitsInHistory unitSet (index : is) =
@@ -173,6 +170,8 @@ findUnitsInHistory unitSet (index : is) =
     then index : (findUnitsInHistory (S.delete index unitSet) is)
     else findUnitsInHistory unitSet is
 
+-- ~ Sorts a list of unit indexes from most to least appropriate
+-- ~ according to the given adjective.
 sortByAdjective :: GameState -> Board DistanceMapTile -> Int -> [Int] -> Adjective -> [Int]
 sortByAdjective gameState distanceMap _ searchUnits Closest =
   L.sortBy
@@ -183,6 +182,7 @@ sortByAdjective gameState _ index searchUnits Last =
   let targetHistory = getTargets ((units gameState) V.! index)
    in findUnitsInHistory (S.fromList searchUnits) targetHistory
 
+-- ~ Returns the index of the unit that best fits a target definition.
 evaluateTarget :: GameState -> Board DistanceMapTile -> Int -> Target -> Maybe Int
 evaluateTarget _ _ index Self = Just index
 evaluateTarget gameState _ index (Specific team name identifier) =
@@ -196,6 +196,9 @@ evaluateTarget gameState distanceMap index (Description adjective unitDesc) =
       sortedTargets = sortByAdjective gameState distanceMap index (V.toList possibleTargets) adjective
    in Maybe.listToMaybe sortedTargets
 
+-- ~ Moves a unit as far as possible in the direction of the given coordinate.
+-- ~ The boolean argument indicates whether the unit should look to step into
+-- ~ the given tile or get in one of its adjacent tiles.
 moveTowardsPosition :: Int -> Board DistanceMapTile -> Coordinate -> Int -> Bool -> State GameState ()
 moveTowardsPosition index distanceMap position maxDistance trimLast =
   let pathToTarget = buildPathToTarget position distanceMap
@@ -204,6 +207,7 @@ moveTowardsPosition index distanceMap position maxDistance trimLast =
         Nothing -> return ()
         Just ((newCol, newRow), _) -> moveUnit index (newCol, newRow)
 
+-- ~ Evaluates a unit's attack action.
 evalAttackAction :: Int -> Target -> Bool -> State GameState Bool
 evalAttackAction index target isFullAttack = do
   gameState <- get
@@ -228,6 +232,9 @@ evalAttackAction index target isFullAttack = do
                         moveTowardsPosition index distanceMap possiblePosition maxDistance False
                         return False
 
+-- ~ Evaluates a unit's action and returns whether it was fully completed.
+-- ~ In the case of having an invalid action target, the function returns the action could be
+-- ~ carried out since it will never be able to be fully completed.
 evalAction :: Int -> TurnAction -> State GameState Bool
 evalAction index (Move (Approach target)) = do
   gameState <- get
@@ -254,6 +261,7 @@ evalAction index (Move Disengage) = do
 evalAction index (Standard (AttackAction target)) = evalAttackAction index target False
 evalAction index (Full (FullAttackAction target)) = evalAttackAction index target True
 
+-- ~ Evaluates all actions in a unit's turn and returns whether all of them could be carried out.
 evalTurn :: Int -> [TurnAction] -> State GameState Bool
 evalTurn _ [] = return True
 evalTurn _ (Pass : as) = return True
