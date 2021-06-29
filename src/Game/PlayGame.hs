@@ -5,6 +5,8 @@ import Commands.Handler
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
+import FileParser.Lexer
+import FileParser.Parser
 import Game.BoardGeneration
 import Game.GameState
 import Game.StatBlockGeneration
@@ -90,3 +92,12 @@ playGame board units = do
         printGameState gameState
         newState <- execStateT commandInput gameState
         turnHandler newState init 0
+
+setupGame :: String -> Either String (Board Tile, V.Vector Unit)
+setupGame input =
+  let (boardIn, unitIn, aiIn, teamIn) = parse (alexScanTokens input)
+   in do
+        (board, offset) <- convertBoardInput boardIn
+        units <- convertStatInputs unitIn
+        ais <- checkAInames aiIn
+        placeUnits board offset units ais teamIn
