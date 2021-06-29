@@ -1,4 +1,4 @@
-module CommandLexerTokens where
+module Commands.Tokens where
 
 data LexerToken
   = LTNext

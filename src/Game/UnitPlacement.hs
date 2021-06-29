@@ -1,13 +1,13 @@
-module UnitPlacement where
+module Game.UnitPlacement where
 
-import BoardGeneration
 import qualified Data.Char as C
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Vector as V
-import ParserTypes
-import StatBlockGeneration
+import FileParser.Types
+import Game.BoardGeneration
+import Game.StatBlockGeneration
 
 data MobUnit = MobUnit
   { name :: String,
@@ -85,6 +85,18 @@ updateUnitPosition (Player player) newPosition = Player (player {playerPosition 
 updateUnitDead :: Unit -> Unit
 updateUnitDead (Mob unit) = Mob (unit {statBlock = (statBlock unit) {healthPoints = -1}})
 updateUnitDead (Player player) = Player (player {playerStatBlock = (playerStatBlock player) {alive = False}})
+
+-- ~ Checks that there are no duplicate names in the AI actions list.
+buildAImap :: [AIInput] -> (M.Map String Action) -> Either String (M.Map String Action)
+buildAImap [] aiMap = Right aiMap
+buildAImap ((name, ai) : ais) aiMap =
+  if M.member name aiMap
+    then Left ("Dupĺicate AI name " ++ name ++ ".")
+    else buildAImap ais (M.insert name ai aiMap)
+
+-- ~ Verifies the names of the listed AI actions.
+checkAInames :: [AIInput] -> Either String (M.Map String Action)
+checkAInames ais = buildAImap ais M.empty
 
 -- TO DO: Ver si puedo unificar las duplicate functions.
 -- ~ Checks that no team names are repeated.

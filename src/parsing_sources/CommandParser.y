@@ -1,8 +1,8 @@
 {
-module CommandParser where
+module Commands.Parser where
 
-import CommandLexerTokens
-import CommandParserTypes
+import Commands.Tokens
+import Commands.Types
 
 }
 

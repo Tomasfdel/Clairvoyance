@@ -1,13 +1,12 @@
 module Main where
 
-import AIActions
-import BoardGeneration
-import Game
-import Lexer
-import Parser
-import StatBlockGeneration
+import FileParser.Lexer
+import FileParser.Parser
+import Game.BoardGeneration
+import Game.PlayGame
+import Game.StatBlockGeneration
+import Game.UnitPlacement
 import System.Environment
-import UnitPlacement
 
 -- ~ Parses the input file and generates all the required data to start the game.
 main :: IO ()

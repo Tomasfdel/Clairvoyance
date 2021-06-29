@@ -1,7 +1,7 @@
-module BoardGeneration where
+module Game.BoardGeneration where
 
 import qualified Data.Vector as V
-import ParserTypes
+import FileParser.Types
 
 data Tile
   = Empty

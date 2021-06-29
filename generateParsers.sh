@@ -1,10 +1,10 @@
 #!/bin/bash
-alex src/parsing/Lexer.x
-happy src/parsing/Parser.y
-mv src/parsing/Lexer.hs src/Lexer.hs
-mv src/parsing/Parser.hs src/Parser.hs
+alex src/parsing_sources/FileLexer.x
+happy src/parsing_sources/FileParser.y
+mv src/parsing_sources/FileLexer.hs src/FileParser/Lexer.hs
+mv src/parsing_sources/FileParser.hs src/FileParser/Parser.hs
 
-alex src/parsing/CommandLexer.x
-happy src/parsing/CommandParser.y
-mv src/parsing/CommandLexer.hs src/CommandLexer.hs
-mv src/parsing/CommandParser.hs src/CommandParser.hs
+alex src/parsing_sources/CommandLexer.x
+happy src/parsing_sources/CommandParser.y
+mv src/parsing_sources/CommandLexer.hs src/Commands/Lexer.hs
+mv src/parsing_sources/CommandParser.hs src/Commands/Parser.hs

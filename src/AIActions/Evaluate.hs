@@ -1,7 +1,8 @@
-module AIActions where
+module AIActions.Evaluate where
 
-import BoardGeneration
-import BreadthFirstSearch
+import AIActions.BreadthFirstSearch
+import AIActions.Escape
+import AIActions.LineOfSight
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -9,25 +10,12 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Ord as O
 import qualified Data.Set as S
 import qualified Data.Vector as V
-import Escape
-import GameState
-import LineOfSight
-import ParserTypes
-import StatBlockGeneration
+import FileParser.Types
+import Game.BoardGeneration
+import Game.GameState
+import Game.StatBlockGeneration
+import Game.UnitPlacement
 import System.Random
-import UnitPlacement
-
--- ~ Checks that there are no duplicate names in the AI actions list.
-buildAImap :: [AIInput] -> (M.Map String Action) -> Either String (M.Map String Action)
-buildAImap [] aiMap = Right aiMap
-buildAImap ((name, ai) : ais) aiMap =
-  if M.member name aiMap
-    then Left ("Dupĺicate AI name " ++ name ++ ".")
-    else buildAImap ais (M.insert name ai aiMap)
-
--- ~ Verifies the names of the listed AI actions.
-checkAInames :: [AIInput] -> Either String (M.Map String Action)
-checkAInames ais = buildAImap ais M.empty
 
 -- ~ Returns a unit predicate for the given unit description.
 evalUnitDesc :: GameState -> Int -> UnitDesc -> (Unit -> Bool)

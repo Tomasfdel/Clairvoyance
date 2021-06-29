@@ -2,8 +2,5 @@ TO DO:
 Revisar archivos viejos (De los primeros que hice) a ver si se pueden agregar mónadas (State, Maybe, Either, etc)
 BoardGeneration: Considerar hacer una función updateBoard
                  Si quiero generar un board con bordes y falla por obstáculos mal puestos, las coordenadas que me devuelve no me sirven porque están offseteadas
-Emprolijar la gramática para que no haya repetición de generadores en las reglas (en los elementos de las listas, por ejemplo)
-Ver cómo estructurar el TurnSequence para que sea más lindo
 Comentar todo el código
-Hacer el intérprete para comandos de los jugadores
 

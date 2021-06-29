@@ -1,21 +1,21 @@
-module CommandHandler where
+module Commands.Handler where
 
-import AIActions
-import BoardGeneration
-import BreadthFirstSearch
-import CommandLexer
-import CommandLexerTokens
-import CommandParser
-import CommandParserTypes
+import AIActions.BreadthFirstSearch
+import AIActions.Evaluate
+import Commands.Lexer
+import Commands.Parser
+import Commands.Tokens
+import Commands.Types
 import Control.Exception
 import Control.Monad.Identity
 import Control.Monad.Morph
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
-import GameState
+import Game.BoardGeneration
+import Game.GameState
+import Game.UnitPlacement
 import System.IO
-import UnitPlacement
 
 morphStateFunction :: State GameState a -> StateT GameState IO a
 morphStateFunction stateFunction = hoist (return . runIdentity) stateFunction

@@ -1,10 +1,10 @@
-module Escape where
+module AIActions.Escape where
 
-import BoardGeneration
-import BreadthFirstSearch
+import AIActions.BreadthFirstSearch
 import qualified Data.List as L
 import qualified Data.Vector as V
-import ParserTypes
+import FileParser.Types
+import Game.BoardGeneration
 
 getMaxDistance :: Board DistanceMapTile -> Float
 getMaxDistance distanceMap = V.foldr (\row restRowsMax -> max restRowsMax (V.foldr (\(_, distance) restMax -> max restMax distance) (-1) row)) (-1) distanceMap

@@ -1,4 +1,4 @@
-module LexerTokens where
+module FileParser.Tokens where
 
 data LexerToken
   = LTMap

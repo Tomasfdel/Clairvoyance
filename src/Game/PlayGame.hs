@@ -1,15 +1,15 @@
-module Game where
+module Game.PlayGame where
 
-import AIActions
-import BoardGeneration
-import CommandHandler
+import AIActions.Evaluate
+import Commands.Handler
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
-import GameState
-import StatBlockGeneration
+import Game.BoardGeneration
+import Game.GameState
+import Game.StatBlockGeneration
+import Game.UnitPlacement
 import qualified System.Random as R
-import UnitPlacement
 
 -- ~ Rolls initiative and adds the given modifier.
 initiativeDieRoll :: (Int, Int) -> IO (Int, Int)

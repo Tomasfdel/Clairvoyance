@@ -1,8 +1,8 @@
 {
-module Parser where
+module FileParser.Parser where
 
-import LexerTokens
-import ParserTypes
+import FileParser.Tokens
+import FileParser.Types
 
 }
 

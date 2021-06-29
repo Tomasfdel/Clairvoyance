@@ -1,7 +1,7 @@
 {
-module Lexer (alexScanTokens) where
+module FileParser.Lexer (alexScanTokens) where
 
-import LexerTokens
+import FileParser.Tokens
 import Data.Char
 
 }

@@ -1,4 +1,4 @@
-module CommandParserTypes where
+module Commands.Types where
 
 data Direction
   = DirUp

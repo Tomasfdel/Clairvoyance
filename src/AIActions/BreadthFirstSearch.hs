@@ -1,13 +1,13 @@
-module BreadthFirstSearch where
+module AIActions.BreadthFirstSearch where
 
-import BoardGeneration
 import Control.Monad.State
 import qualified Data.PSQueue as PQ
 import qualified Data.Sequence as Seq
 import qualified Data.Vector as V
-import GameState
-import ParserTypes
-import UnitPlacement
+import FileParser.Types
+import Game.BoardGeneration
+import Game.GameState
+import Game.UnitPlacement
 
 type DistanceMapTile = (Coordinate, Float)
 

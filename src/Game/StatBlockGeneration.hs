@@ -1,9 +1,9 @@
-module StatBlockGeneration where
+module Game.StatBlockGeneration where
 
-import BoardGeneration
 import qualified Data.Map as M
 import qualified Data.Set as S
-import ParserTypes
+import FileParser.Types
+import Game.BoardGeneration
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
 

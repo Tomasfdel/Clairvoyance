@@ -1,9 +1,9 @@
-module GameState where
+module Game.GameState where
 
-import BoardGeneration
 import qualified Data.Vector as V
+import Game.BoardGeneration
+import Game.UnitPlacement
 import qualified System.Random as R
-import UnitPlacement
 
 data GameState = GameState
   { board :: Board Tile,

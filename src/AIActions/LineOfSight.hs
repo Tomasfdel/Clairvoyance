@@ -1,11 +1,11 @@
-module LineOfSight where
+module AIActions.LineOfSight where
 
-import BoardGeneration
-import BreadthFirstSearch
+import AIActions.BreadthFirstSearch
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Vector as V
-import ParserTypes
+import FileParser.Types
+import Game.BoardGeneration
 
 cornerCoordinates :: Coordinate -> [Coordinate]
 cornerCoordinates (col, row) = [(col, row), (col, row + 1), (col + 1, row), (col + 1, row + 1)]

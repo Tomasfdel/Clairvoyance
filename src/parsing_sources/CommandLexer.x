@@ -1,7 +1,7 @@
 {
-module CommandLexer (alexScanTokens) where
+module Commands.Lexer (alexScanTokens) where
 
-import CommandLexerTokens
+import Commands.Tokens
 
 }
 

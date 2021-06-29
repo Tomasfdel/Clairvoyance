@@ -1,4 +1,4 @@
-module ParserTypes where
+module FileParser.Types where
 
 data Direction = DirUp | DirRight | DirDown | DirLeft
   deriving (Show)
