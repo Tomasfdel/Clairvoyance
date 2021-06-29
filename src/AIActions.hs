@@ -123,11 +123,11 @@ rollAttack (_, mod, damage) = do
 checkAttackHit :: Int -> (Int, Int) -> State GameState ()
 checkAttackHit defendInd (attackRoll, damageRoll) = do
   defenderUnit <- gets (\gameState -> (units gameState) V.! defendInd)
-  case defenderUnit of 
+  case defenderUnit of
     (Player _) -> return ()
-    (Mob defender) -> 
+    (Mob defender) ->
       if attackRoll >= armorClass (statBlock defender)
-         then
+        then
           modify
             ( \gameState ->
                 let newDefender = defender {statBlock = (statBlock defender) {healthPoints = healthPoints (statBlock defender) - damageRoll}}
@@ -141,14 +141,15 @@ resolveAttack attackInd defendInd attackType = do
   attackerUnit <- gets (\gameState -> (units gameState) V.! attackInd)
   case attackerUnit of
     (Player _) -> return ()
-    (Mob attacker) -> do modify
-                           ( \gameState ->
-                               let newAttacker = attacker {targets = defendInd : (targets attacker)}
-                                in gameState {units = (units gameState) V.// [(attackInd, Mob newAttacker)]}
-                           )
-                         attackRolls <- mapM rollAttack (attackType (statBlock attacker))
-                         mapM_ (checkAttackHit defendInd) attackRolls
-                         updateIfDead defendInd
+    (Mob attacker) -> do
+      modify
+        ( \gameState ->
+            let newAttacker = attacker {targets = defendInd : (targets attacker)}
+             in gameState {units = (units gameState) V.// [(attackInd, Mob newAttacker)]}
+        )
+      attackRolls <- mapM rollAttack (attackType (statBlock attacker))
+      mapM_ (checkAttackHit defendInd) attackRolls
+      updateIfDead defendInd
 
 moveUnit :: Int -> Coordinate -> State GameState ()
 moveUnit index (newCol, newRow) = do

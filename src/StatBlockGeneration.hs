@@ -7,10 +7,10 @@ import ParserTypes
 
 -- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
 
-data StatBlock = MobStat MobStatBlock
-               | PlayerStat PlayerStatBlock
+data StatBlock
+  = MobStat MobStatBlock
+  | PlayerStat PlayerStatBlock
   deriving (Show)
-
 
 data MobStatBlock = MobStatBlock
   { healthPoints :: Int,
@@ -22,9 +22,8 @@ data MobStatBlock = MobStatBlock
   }
   deriving (Show)
 
-data PlayerStatBlock = PlayerStatBlock { playerInitiative :: Int, alive :: Bool }
+data PlayerStatBlock = PlayerStatBlock {playerInitiative :: Int, alive :: Bool}
   deriving (Show)
-
 
 mobStatBlockSize :: Int
 mobStatBlockSize = 6
@@ -43,14 +42,16 @@ statBlockFromMap map =
       (IntType armorClass) = map M.! "AC"
       (AttacksType attack) = map M.! "Attack"
       (AttacksType fullAttack) = map M.! "FullAttack"
-   in MobStat (MobStatBlock
-        { healthPoints = healthPoints,
-          initiative = initiative,
-          speed = speed,
-          armorClass = armorClass,
-          attack = attack,
-          fullAttack = fullAttack
-        })
+   in MobStat
+        ( MobStatBlock
+            { healthPoints = healthPoints,
+              initiative = initiative,
+              speed = speed,
+              armorClass = armorClass,
+              attack = attack,
+              fullAttack = fullAttack
+            }
+        )
 
 -- ~ Checks the damage roll in an attack description is valid.
 validAttack :: AttackDesc -> Bool
@@ -110,11 +111,10 @@ checkStatInputs (MobInput (name, stats) : us) = case buildStatBlock stats M.empt
   Right statBlock -> case checkStatInputs us of
     Left errorMsg -> Left errorMsg
     Right statList -> Right ((name, statBlock) : statList)
-checkStatInputs (PlayerInput (name, init) : us) = 
+checkStatInputs (PlayerInput (name, init) : us) =
   case checkStatInputs us of
     Left errorMsg -> Left errorMsg
     Right statList -> Right ((name, PlayerStat (PlayerStatBlock {playerInitiative = init, alive = True})) : statList)
-    
 
 -- ~ Checks that there are no duplicated unit names in the unit description list.
 duplicateUnitName :: [UnitInput] -> S.Set String -> Maybe String

@@ -33,8 +33,9 @@ data StatInput
   | FullAttack [AttackDesc]
   deriving (Show)
 
-data UnitInput = MobInput (String, [StatInput])
-               | PlayerInput (String, Int)
+data UnitInput
+  = MobInput (String, [StatInput])
+  | PlayerInput (String, Int)
 
 data Range
   = IntR Int
@@ -47,6 +48,7 @@ data Range
   deriving (Show)
 
 data IntComparison = Comparison (Int -> Bool)
+
 instance Show IntComparison where
   show (Comparison f) = "IntComparison"
 
