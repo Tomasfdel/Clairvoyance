@@ -77,7 +77,6 @@ rollDie minVal maxVal = state $ \gameState ->
       (result, newGen) = randomR (minVal, maxVal) generator
    in (result, gameState {randomGen = newGen})
 
--- TO DO: Revisar si me conviene que sea un dieRoll o que sea una tripla
 rollDice :: DieRoll -> State GameState Int
 rollDice dieRoll = do
   results <- sequence (replicate (dieAmount dieRoll) (rollDie 1 (dieValue dieRoll)))

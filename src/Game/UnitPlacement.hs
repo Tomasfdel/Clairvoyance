@@ -34,8 +34,6 @@ data Unit
   | Player PlayerUnit
   deriving (Show)
 
--- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
-
 -- ~ Rough print of the units vector used for debugging purposes.
 printUnits :: V.Vector Unit -> IO ()
 printUnits units = do
@@ -98,7 +96,6 @@ buildAImap ((name, ai) : ais) aiMap =
 checkAInames :: [AIInput] -> Either String (M.Map String Action)
 checkAInames ais = buildAImap ais M.empty
 
--- TO DO: Ver si puedo unificar las duplicate functions.
 -- ~ Checks that no team names are repeated.
 duplicateTeamName :: [Team] -> S.Set String -> Maybe String
 duplicateTeamName [] _ = Nothing
@@ -119,8 +116,6 @@ shiftUnits teams offset =
         )
     )
     teams
-
--- ~ TO DO: Estas funciones se pueden simplificar haciendo un map del campo correspondiente y creando una función del tipo [String] -> (M.Map String a) -> Maybe String
 
 -- ~ Checks that all units in the team have a defined statblock.
 invalidNameInTeam :: [(String, String, Int, [Coordinate])] -> (M.Map String StatBlock) -> Maybe String

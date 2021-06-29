@@ -15,11 +15,6 @@ type Board a = V.Vector (V.Vector a)
 listProduct :: [a] -> [b] -> [(a, b)]
 listProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
--- TO DO: Consider extracting methods specific of the board to another file and leave this for strictly board generation.
--- TO DO: This is a partial function, but I want it to be partial.
-unitIndex :: Tile -> Int
-unitIndex (Unit index) = index
-
 showBoard :: Show a => Board a -> String
 showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
 

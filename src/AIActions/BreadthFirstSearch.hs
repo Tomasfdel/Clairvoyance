@@ -130,7 +130,6 @@ insertTilesInQueue queue [] = queue
 insertTilesInQueue queue ((coord, distance) : xs) = insertTilesInQueue (PQ.insert coord distance queue) xs
 
 expandTiles :: Board Tile -> Board DistanceMapTile -> Bool -> PQ.PSQ Coordinate Float -> Board DistanceMapTile
--- TO DO: This looks like it can be expanded into a state function.
 expandTiles board distanceMap ignoreObjects queue =
   case PQ.minView queue of
     Nothing -> distanceMap

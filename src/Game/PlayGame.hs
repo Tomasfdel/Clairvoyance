@@ -78,8 +78,6 @@ turnHandler gameState initiative index =
           turnHandler (newerState {turnCount = newTurn}) initiative newIndex
         else turnHandler (newState {turnCount = newTurn}) initiative newIndex
 
--- ~ TO DO: Debería reorganizar todas las funciones de una manera más lógica y en carpetas, eventualmente.
--- ~ TO DO: Mientras hago eso, actualizar y escribir los docstrings faltantes.
 -- ~ Sets the initiative order for units and starts first turn.
 playGame :: Board Tile -> (V.Vector Unit) -> IO ()
 playGame board units = do

@@ -16,7 +16,6 @@ anyWallsInList board coordList = any (\(col, row) -> (board V.! row) V.! col == 
 allWallsInList :: Board Tile -> [Coordinate] -> Bool
 allWallsInList board coordList = all (\(col, row) -> (board V.! row) V.! col == Wall) coordList
 
--- ~ TO DO: Try to generalize this function and all below.
 checkWallsCorner :: Board Tile -> Coordinate -> Bool
 checkWallsCorner board (col, row) = anyWallsInList board [(col - 1, row - 1), (col - 1, row), (col, row - 1), (col, row)]
 

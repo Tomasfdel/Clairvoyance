@@ -5,8 +5,6 @@ import qualified Data.Set as S
 import FileParser.Types
 import Game.BoardGeneration
 
--- TO DO: Cambiar los error msg para que cada función agregue la parte que le corresponde y no sólo el nombre del team, unit o lo que sea.
-
 data StatBlock
   = MobStat MobStatBlock
   | PlayerStat PlayerStatBlock
@@ -56,8 +54,6 @@ statBlockFromMap map =
 -- ~ Checks the damage roll in an attack description is valid.
 validAttack :: AttackDesc -> Bool
 validAttack (_, _, roll) = (dieAmount roll) >= 0 && (dieValue roll) > 0
-
--- TO DO: Limpiar esta función, por el amor de Dios
 
 -- ~ Checks all necessary fields for a statblock are present in the given stat description,
 -- ~ then builds the statblock if they are.
