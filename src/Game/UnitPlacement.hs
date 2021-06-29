@@ -157,10 +157,7 @@ placeTeamUnits board ((col, row) : cs) index =
   if not (validCoord board (col, row))
     then Left ("Coordinate " ++ (show (col, row)) ++ " out of bounds in unit ")
     else case (board V.! row) V.! col of
-      Empty ->
-        let newRow = (board V.! row) V.// [(col, Unit index)]
-            newBoard = board V.// [(row, newRow)]
-         in placeTeamUnits newBoard cs (index + 1)
+      Empty -> placeTeamUnits (updateBoard board (col, row) (Unit index)) cs (index + 1)
       _ -> Left ("Invalid unit placement " ++ (show (col, row)) ++ " in unit ")
 
 -- ~ Place the units in the team on the board. Each unit is referenced by

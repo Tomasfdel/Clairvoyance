@@ -87,14 +87,10 @@ rollDice dieRoll = do
   return (modifier dieRoll + sum results)
 
 -- ~ Changes the state board in the given coordinate for the new given tile.
-updateBoard :: Coordinate -> Tile -> State GameState ()
-updateBoard (col, row) newTile =
+updateStateBoard :: Coordinate -> Tile -> State GameState ()
+updateStateBoard (col, row) newTile =
   modify
-    ( \gameState ->
-        let newRow = ((board gameState) V.! row) V.// [(col, newTile)]
-            newBoard = (board gameState) V.// [(row, newRow)]
-         in gameState {board = newBoard}
-    )
+    (\gameState -> gameState {board = updateBoard (board gameState) (col, row) newTile})
 
 -- ~ Updates the board if a certain unit is dead.
 updateIfDead :: Int -> State GameState ()
@@ -103,7 +99,7 @@ updateIfDead index = do
   let unit = (units gameState) V.! index
    in if not (unitIsAlive unit)
         then do
-          updateBoard (getPosition unit) Empty
+          updateStateBoard (getPosition unit) Empty
           return ()
         else return ()
 
@@ -153,13 +149,13 @@ resolveAttack attackInd defendInd attackType = do
 moveUnit :: Int -> Coordinate -> State GameState ()
 moveUnit index (newCol, newRow) = do
   unit <- gets (\gameState -> (units gameState) V.! index)
-  updateBoard (getPosition unit) Empty
+  updateStateBoard (getPosition unit) Empty
   modify
     ( \gameState ->
         let newUnit = updateUnitPosition unit (newCol, newRow)
          in gameState {units = (units gameState) V.// [(index, newUnit)]}
     )
-  updateBoard (newCol, newRow) (Unit index)
+  updateStateBoard (newCol, newRow) (Unit index)
 
 -- ~ Returns a list of all unit indices in the given set that are present
 -- ~ in the given target history.

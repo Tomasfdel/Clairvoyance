@@ -72,9 +72,7 @@ findSideTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visited,
     then
       let sideTile = (board V.! (row + rowDiff)) V.! (col + colDiff)
           (_, currentDistance) = (visited V.! row) V.! col
-          newDistanceTile = ((col, row), currentDistance + 1)
-          newVisRow = (visited V.! (row + rowDiff)) V.// [(col + colDiff, newDistanceTile)]
-          newVisited = visited V.// [(row + rowDiff, newVisRow)]
+          newVisited = updateBoard visited (col + colDiff, row + rowDiff) ((col, row), currentDistance + 1)
        in if ignoreObjects
             || not (isUnitTile sideTile) && sideTile /= Wall
             then ((), (newVisited, ((col + colDiff, row + rowDiff), currentDistance + 1) : found))
@@ -103,9 +101,7 @@ findDiagonalTile board ignoreObjects (col, row) colDiff rowDiff = state $ \(visi
     then
       let diagonalTile = (board V.! (row + rowDiff)) V.! (col + colDiff)
           (_, currentDistance) = (visited V.! row) V.! col
-          newDistanceTile = ((col, row), currentDistance + 1.5)
-          newVisRow = (visited V.! (row + rowDiff)) V.// [(col + colDiff, newDistanceTile)]
-          newVisited = visited V.// [(row + rowDiff, newVisRow)]
+          newVisited = updateBoard visited (col + colDiff, row + rowDiff) ((col, row), currentDistance + 1.5)
        in if ignoreObjects || not (isUnitTile diagonalTile)
             then ((), (newVisited, ((col + colDiff, row + rowDiff), currentDistance + 1.5) : found))
             else ((), (newVisited, found))
@@ -130,10 +126,7 @@ findNewTiles board ignoreObjects pos = do
 setSearchStartTiles :: Board DistanceMapTile -> [Coordinate] -> Board DistanceMapTile
 setSearchStartTiles distanceMap [] = distanceMap
 setSearchStartTiles distanceMap ((col, row) : cs) =
-  let searchStartTile = ((-1, -1), 0)
-      updatedRow = (distanceMap V.! row) V.// [(col, searchStartTile)]
-      updatedMap = distanceMap V.// [(row, updatedRow)]
-   in setSearchStartTiles updatedMap cs
+  setSearchStartTiles (updateBoard distanceMap (col, row) ((-1, -1), 0)) cs
 
 -- ~ Creates a board with the same dimensions as the given one, but full of
 -- ~ unexplored tiles, except in the given source coordinates, where there

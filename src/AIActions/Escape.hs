@@ -57,10 +57,7 @@ updateEscapeMap escapeMap [] = escapeMap
 updateEscapeMap escapeMap (((col, row), value, isUpdated) : xs) =
   if not isUpdated
     then updateEscapeMap escapeMap xs
-    else
-      let newRow = (escapeMap V.! row) V.// [(col, value)]
-          newMap = escapeMap V.// [(row, newRow)]
-       in updateEscapeMap newMap xs
+    else updateEscapeMap (updateBoard escapeMap (col, row) value) xs
 
 -- ~ Scans each escape tile, updating their value until no more changes are made.
 roundOutCorners :: Board Tile -> Board Float -> Board Float

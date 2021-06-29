@@ -12,6 +12,18 @@ data Tile
 
 type Board a = V.Vector (V.Vector a)
 
+-- ~ Updates the value of the given coordinate of the board.
+updateBoard :: Board a -> Coordinate -> a -> Board a
+updateBoard board (col, row) newValue =
+  let newRow = (board V.! row) V.// [(col, newValue)]
+   in board V.// [(row, newRow)]
+
+-- ~ Updates all the listed columns of the given board in the given row.
+updateBoardRow :: Board a -> Int -> [(Int, a)] -> Board a
+updateBoardRow board row updates =
+  let newRow = (board V.! row) V.// updates
+   in board V.// [(row, newRow)]
+
 -- ~ Returns a list of pairs of each member of the first list with each member of the second one.
 listProduct :: [a] -> [b] -> [(a, b)]
 listProduct xs ys = [(x, y) | x <- xs, y <- ys]
@@ -42,9 +54,7 @@ placeWall board ((colS, colE), (rowS, rowE)) =
     then board
     else
       let updates = [(x, Wall) | x <- [colS .. colE]]
-          newRow = (board V.! rowS) V.// updates
-          newBoard = board V.// [(rowS, newRow)]
-       in placeWall newBoard ((colS, colE), (rowS + 1, rowE))
+       in placeWall (updateBoardRow board rowS updates) ((colS, colE), (rowS + 1, rowE))
 
 -- ~ Fills the board with walls on the tiles with coordinates referenced in the obstacle list.
 placeObstacles :: Board Tile -> Coordinate -> [Obstacle] -> Either String (Board Tile)
@@ -81,14 +91,10 @@ placeBorders :: Board Tile -> [(Int, Direction)] -> Coordinate -> Board Tile
 placeBorders board [] _ = board
 placeBorders board ((n, DirLeft) : bs) (col, row) =
   let updates = [(x, Border) | x <- [col - n .. col]]
-      newRow = (board V.! row) V.// updates
-      newBoard = board V.// [(row, newRow)]
-   in placeBorders newBoard bs (col - n, row)
+   in placeBorders (updateBoardRow board row updates) bs (col - n, row)
 placeBorders board ((n, DirRight) : bs) (col, row) =
   let updates = [(x, Border) | x <- [col .. col + n]]
-      newRow = (board V.! row) V.// updates
-      newBoard = board V.// [(row, newRow)]
-   in placeBorders newBoard bs (col + n, row)
+   in placeBorders (updateBoardRow board row updates) bs (col + n, row)
 placeBorders board ((n, DirUp) : bs) (col, row) =
   let newRows = [(y, (board V.! y) V.// [(col, Border)]) | y <- [row - n .. row]]
       newBoard = board V.// newRows
@@ -116,11 +122,7 @@ floodFill :: Board Tile -> [Coordinate] -> Tile -> Tile -> Board Tile
 floodFill board [] _ _ = board
 floodFill board ((col, row) : cs) old new =
   if validCoord board (col, row) && ((board V.! row) V.! col) == old
-    then
-      let newRow = (board V.! row) V.// [(col, new)]
-          newBoard = board V.// [(row, newRow)]
-          newCoords = adjacentStraightCoords (col, row)
-       in floodFill newBoard (cs ++ newCoords) old new
+    then floodFill (updateBoard board (col, row) new) (cs ++ (adjacentStraightCoords (col, row))) old new
     else floodFill board cs old new
 
 -- ~ Replaces all the tiles of the old type for the new type in the board.
