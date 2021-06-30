@@ -8,6 +8,7 @@ import qualified Data.Vector as V
 import FileParser.Lexer
 import FileParser.Parser
 import Game.BoardGeneration
+import Game.Display
 import Game.GameState
 import Game.StatBlockGeneration
 import Game.UnitPlacement
@@ -20,7 +21,7 @@ initiativeDieRoll (index, mod) = do
   return (index, result + mod)
 
 -- ~ Returns a pair of unit index and initiative roll for each unit.
-initiativeDiceRolls :: (V.Vector Unit) -> [Int] -> IO ([(Int, Int)])
+initiativeDiceRolls :: V.Vector Unit -> [Int] -> IO [(Int, Int)]
 initiativeDiceRolls units indices =
   let indicesWithMods = map (\i -> (i, getInitiative (units V.! i))) indices
    in mapM initiativeDieRoll indicesWithMods
@@ -35,7 +36,7 @@ regroupInitiatives rolls =
 
 -- ~ Reorders unit indices in descending order of their initiative rolls,
 -- ~ breaking ties with another roll among tied units.
-initiativeReorder :: (V.Vector Unit) -> [Int] -> IO ([Int])
+initiativeReorder :: V.Vector Unit -> [Int] -> IO [Int]
 initiativeReorder _ [] = return []
 initiativeReorder _ [n] = return [n]
 initiativeReorder units indices = do
@@ -44,7 +45,7 @@ initiativeReorder units indices = do
   return (concat reorderedGroups)
 
 -- ~ Returns a list of the unit indices, ordered by their initiative rolls.
-initiativeRoll :: (V.Vector Unit) -> IO (V.Vector Int)
+initiativeRoll :: V.Vector Unit -> IO (V.Vector Int)
 initiativeRoll units = do
   initList <- initiativeReorder units [0 .. (V.length units - 1)]
   return (V.fromList initList)
@@ -65,7 +66,7 @@ takeTurn index = do
 -- ~ TO DO: Promote this to use StateT IO so I can make it monadic.
 -- ~ Determines which unit should take its turn, and modifies the game state after it.
 -- ~ After each unit's turn, it sets up a console to allow the players to input commands.
-turnHandler :: GameState -> (V.Vector Int) -> Int -> IO ()
+turnHandler :: GameState -> V.Vector Int -> Int -> IO ()
 turnHandler gameState initiative index =
   let (playedTurn, newState) = runState (takeTurn (initiative V.! index)) gameState
       newIndex = mod (index + 1) (V.length initiative)
@@ -74,6 +75,7 @@ turnHandler gameState initiative index =
         then do
           putStrLn ""
           putStrLn ""
+          printBoard (board newState)
           printGameState newState
           putStrLn ("Initiative index: " ++ (show index))
           putStrLn ("Unit index: " ++ (show (initiative V.! index)))
@@ -82,14 +84,14 @@ turnHandler gameState initiative index =
         else turnHandler (newState {turnCount = newTurn}) initiative newIndex
 
 -- ~ Sets the initiative order for units and starts the first turn.
-playGame :: Board Tile -> (V.Vector Unit) -> IO ()
+playGame :: Board Tile -> V.Vector Unit -> IO ()
 playGame board units = do
   init <- initiativeRoll units
-  putStrLn "Initiative order:"
-  putStrLn (show init)
+  printInitiativeOrder init
   randomGen <- R.getStdGen
   let gameState = GameState {board = board, units = units, turnCount = 1, randomGen = randomGen}
    in do
+        printBoard (board newState)
         printGameState gameState
         newState <- execStateT commandInput gameState
         turnHandler newState init 0

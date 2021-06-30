@@ -28,14 +28,6 @@ updateBoardRow board row updates =
 listProduct :: [a] -> [b] -> [(a, b)]
 listProduct xs ys = [(x, y) | x <- xs, y <- ys]
 
--- ~ Roughly converts the given board to a string.
-showBoard :: Show a => Board a -> String
-showBoard board = foldr (\row rest -> (show row) ++ "\n" ++ rest) "" board
-
--- ~ Rough print of the board used for debugging purposes.
-printBoard :: Show a => Board a -> IO ()
-printBoard board = putStr (showBoard board)
-
 -- ~ Returns a list of all the coordinates of the given board.
 listBoardCoordinates :: Board a -> [Coordinate]
 listBoardCoordinates board =
