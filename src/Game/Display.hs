@@ -12,19 +12,19 @@ printInitiativeOrder indices = do
 
 -- ~ String for an empty tile row.
 emptyTileSpace :: String
-emptyTileSpace = "      "
+emptyTileSpace = "    "
 
 -- ~ String for a wall tile row.
 wallTileSpace :: String
-wallTileSpace = "||||||"
+wallTileSpace = "||||"
 
 -- ~ String for a horizontal board line around a tile.
 edgeTileSpace :: String
-edgeTileSpace = "------"
+edgeTileSpace = "----"
 
 -- ~ Converts the index to a string centered with a couple spaces.
 showUnitIndex :: Int -> String
-showUnitIndex index = "  " ++ show (mod (div index 10) 10) ++ show (mod index 10) ++ "  "
+showUnitIndex index = " " ++ show (mod (div index 10) 10) ++ show (mod index 10) ++ " "
 
 -- ~ Returns the string corresponding to the top or bottom row of a tile's printed version.
 showOuterTileRow :: Tile -> String
@@ -43,14 +43,11 @@ joinTileRows rows = "|" ++ (V.foldr (\a b -> a ++ "|" ++ b) "\n" rows)
 
 -- ~ Returns a string for the given board row.
 showBoardRow :: V.Vector Tile -> String
-showBoardRow row =
-  let outerRow = joinTileRows (V.map showOuterTileRow row)
-      middleRow = joinTileRows (V.map showMiddleTileRow row)
-   in outerRow ++ middleRow ++ outerRow
+showBoardRow row = joinTileRows (V.map showMiddleTileRow row)
 
 -- ~ String for the top and bottom horizontal lines of a board of the given width.
 boardOuterEdge :: Int -> String
-boardOuterEdge width = (replicate (6 * width + width + 1) '-') ++ "\n"
+boardOuterEdge width = (replicate (4 * width + width + 1) '-') ++ "\n"
 
 -- ~ String for the inner horizontal lines of a board of the given width.
 boardInnerEdge :: Int -> String
