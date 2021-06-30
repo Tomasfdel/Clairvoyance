@@ -12,6 +12,7 @@ data StatBlock
 
 data MobStatBlock = MobStatBlock
   { healthPoints :: Int,
+    maxHealthPoints :: Int,
     initiative :: Int,
     speed :: Int,
     armorClass :: Int,
@@ -43,6 +44,7 @@ statBlockFromMap map =
    in MobStat
         ( MobStatBlock
             { healthPoints = healthPoints,
+              maxHealthPoints = healthPoints,
               initiative = initiative,
               speed = speed,
               armorClass = armorClass,

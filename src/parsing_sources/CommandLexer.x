@@ -13,6 +13,8 @@ $alpha = [a-zA-Z]   -- alphabetic characters
 tokens :-
 	$white+        ;
     "next"         { \s -> LTNext }
+    "show"         { \s -> LTShow }
+    "board"        { \s -> LTBoard }
     "move"         { \s -> LTMove }
     "U"            { \s -> LTUp }
     "UR"           { \s -> LTUpRight }

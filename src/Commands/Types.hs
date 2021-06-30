@@ -21,8 +21,14 @@ data Target
   | Description String String Int
   deriving (Show)
 
+data Printable
+  = PBoard
+  | PUnit Target
+  deriving (Show)
+
 data Command
   = Next
+  | Show Printable
   | Move Target Movement
   | Attack Target Int Int
   | Kill Target

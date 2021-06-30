@@ -91,7 +91,7 @@ playGame board units = do
   randomGen <- R.getStdGen
   let gameState = GameState {board = board, units = units, turnCount = 1, randomGen = randomGen}
    in do
-        printBoard (board newState)
+        printBoard board
         printGameState gameState
         newState <- execStateT commandInput gameState
         turnHandler newState init 0

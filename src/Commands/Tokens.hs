@@ -2,6 +2,8 @@ module Commands.Tokens where
 
 data LexerToken
   = LTNext
+  | LTShow
+  | LTBoard
   | LTMove
   | LTUp
   | LTUpRight

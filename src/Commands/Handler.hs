@@ -13,6 +13,7 @@ import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
 import Game.BoardGeneration
+import Game.Display
 import Game.GameState
 import Game.UnitPlacement
 import System.IO
@@ -21,36 +22,33 @@ import System.IO
 morphStateFunction :: State GameState a -> StateT GameState IO a
 morphStateFunction stateFunction = hoist (return . runIdentity) stateFunction
 
--- ~ Checks the given index corresponds to a unit that is alive.
-isValidUnitIndex :: Int -> GameState -> Bool
-isValidUnitIndex index gameState = index >= 0 && index < V.length (units gameState) && unitIsAlive ((units gameState) V.! index)
+-- ~ Checks the given index is within the possible values.
+isValidUnitIndex :: GameState -> Int -> Bool
+isValidUnitIndex gameState index = index >= 0 && index < V.length (units gameState)
+
+-- ~ Checks that the unit with the given index is alive.
+isUnitIndexAlive :: GameState -> Int -> Bool
+isUnitIndexAlive gameState index = unitIsAlive ((units gameState) V.! index)
 
 -- ~ Checks the target refers to a valid unit, and returns its index if it does.
-evalCommandTarget :: Target -> State GameState (Maybe Int)
-evalCommandTarget (Index index) = do
-  gameState <- get
-  if isValidUnitIndex index gameState
-    then return (Just index)
-    else return Nothing
-evalCommandTarget (Description team name identifier) = do
-  gameState <- get
-  return
-    ( ( V.filter
-          (\index -> let unit = (units gameState) V.! index in getTeam unit == team && getName unit == name && getIdentifier unit == identifier && unitIsAlive unit)
-          (V.generate (V.length (units gameState)) id)
-      )
-        V.!? 0
-    )
+evalCommandTarget :: GameState -> Bool -> Target -> Maybe Int
+evalCommandTarget gameState mustBeAlive (Index index) =
+  if isValidUnitIndex gameState index
+    && (not mustBeAlive || isUnitIndexAlive gameState index)
+    then Just index
+    else Nothing
+evalCommandTarget gameState mustBeAlive (Description team name identifier) =
+  ( V.filter
+      (\index -> let unit = (units gameState) V.! index in getTeam unit == team && getName unit == name && getIdentifier unit == identifier && (not mustBeAlive || unitIsAlive unit))
+      (V.generate (V.length (units gameState)) id)
+  )
+    V.!? 0
 
--- ~ Validates if a unit is alive, and kills it if it is.
-setUnitDead :: Int -> State GameState Bool
+-- ~ Kills the given unit.
+setUnitDead :: Int -> State GameState ()
 setUnitDead index = do
   gameState <- get
-  if isValidUnitIndex index gameState
-    then do
-      put gameState {units = (units gameState) V.// [(index, updateUnitDead ((units gameState) V.! index))]}
-      return True
-    else return False
+  put gameState {units = (units gameState) V.// [(index, updateUnitDead ((units gameState) V.! index))]}
 
 -- ~ Converts a direction to its associated coordinate difference.
 directionToOffset :: Direction -> (Int, Int)
@@ -68,37 +66,50 @@ directionToOffset DirUpLeft = (-1, -1)
 evalCommandMovement :: Int -> Movement -> State GameState (Maybe (Int, Int))
 evalCommandMovement index (Position (col, row)) = do
   gameState <- get
-  if isValidUnitIndex index gameState
-    && validCoord (board gameState) (col, row)
+  if validCoord (board gameState) (col, row)
     && ((board gameState) V.! row) V.! col == Empty
     then return (Just (col, row))
     else return Nothing
 evalCommandMovement index (Path path) = do
   gameState <- get
-  if isValidUnitIndex index gameState
-    then
-      let position = getPosition ((units gameState) V.! index)
-          pathOffsets = map directionToOffset path
-          (finalPosition, validSteps) =
-            L.mapAccumL
-              ( \(col, row) (colDiff, rowDiff) ->
-                  let (newCol, newRow) = (col + colDiff, row + rowDiff)
-                   in ((newCol, newRow), isValidMovement (board gameState) (col, row) (newCol, newRow))
-              )
-              position
-              pathOffsets
-       in if and validSteps
-            then return (Just finalPosition)
-            else return Nothing
-    else return Nothing
+  let position = getPosition ((units gameState) V.! index)
+      pathOffsets = map directionToOffset path
+      (finalPosition, validSteps) =
+        L.mapAccumL
+          ( \(col, row) (colDiff, rowDiff) ->
+              let (newCol, newRow) = (col + colDiff, row + rowDiff)
+               in ((newCol, newRow), isValidMovement (board gameState) (col, row) (newCol, newRow))
+          )
+          position
+          pathOffsets
+   in if and validSteps
+        then return (Just finalPosition)
+        else return Nothing
+
+-- ~ Pretty prints the described object.
+printStatePart :: GameState -> Printable -> IO ()
+printStatePart gameState PBoard = do
+  putStrLn ""
+  printBoard (board gameState)
+  putStrLn ""
+printStatePart gameState (PUnit target) = case evalCommandTarget gameState False target of
+  Nothing -> putStrLn "Invalid command target."
+  Just index -> do
+    putStrLn ""
+    printUnit index ((units gameState) V.! index)
+    putStrLn ""
 
 -- ~ Validates the given command , modifies the game state according to it and
 -- ~ returns whether the command handler should call itself again.
 handleCommand :: Command -> StateT GameState IO Bool
 handleCommand Next = return False
+handleCommand (Show printable) = do
+  gameState <- get
+  lift $ printStatePart gameState printable
+  return True
 handleCommand (Move target movement) = do
-  evaluatedTarget <- morphStateFunction $ evalCommandTarget target
-  case evaluatedTarget of
+  gameState <- get
+  case evalCommandTarget gameState True target of
     Nothing -> do lift $ putStrLn "Invalid command target."
     Just unitIndex -> do
       evaluatedMovement <- morphStateFunction $ evalCommandMovement unitIndex movement
@@ -107,22 +118,20 @@ handleCommand (Move target movement) = do
         Just position -> do morphStateFunction $ moveUnit unitIndex position
   return True
 handleCommand (Attack target attack damage) = do
-  evaluatedTarget <- morphStateFunction $ evalCommandTarget target
-  case evaluatedTarget of
+  gameState <- get
+  case evalCommandTarget gameState True target of
     Nothing -> do lift $ putStrLn "Invalid command target."
     Just unitIndex -> do
       morphStateFunction $ checkAttackHit unitIndex (attack, damage)
       morphStateFunction $ updateIfDead unitIndex
   return True
 handleCommand (Kill target) = do
-  evaluatedTarget <- morphStateFunction $ evalCommandTarget target
-  case evaluatedTarget of
+  gameState <- get
+  case evalCommandTarget gameState True target of
     Nothing -> do lift $ putStrLn "Invalid command target."
     Just unitIndex -> do
-      validUnit <- morphStateFunction $ setUnitDead unitIndex
-      if validUnit
-        then morphStateFunction $ updateIfDead unitIndex
-        else return ()
+      morphStateFunction $ setUnitDead unitIndex
+      morphStateFunction $ updateIfDead unitIndex
   return True
 
 -- ~ Prompts the user for a command, handles it and is called again until the user says they're done.

@@ -12,6 +12,8 @@ import Commands.Types
 
 %token
 	Next           { LTNext }
+	Show           { LTShow }
+	Board          { LTBoard }
 	Move           { LTMove }
 	Up             { LTUp }
 	UpRight        { LTUpRight }
@@ -34,9 +36,13 @@ import Commands.Types
 %%
 
 Command : Next                                { Next }
+        | Show Printable                      { Show $2 }
         | Move Target Movement                { Move $2 $3 }
         | Attack Target Nat Nat               { Attack $2 $3 $4 }
         | Kill Target                         { Kill $2 }
+
+Printable : Board                             { PBoard }
+          | Target                            { PUnit $1 }
 
 Target : Nat                                  { Index $1 }
        | Name ':' Name ':' Nat                { Description $1 $3 $5 }
