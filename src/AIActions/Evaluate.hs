@@ -3,6 +3,7 @@ module AIActions.Evaluate where
 import AIActions.BreadthFirstSearch
 import AIActions.Escape
 import AIActions.LineOfSight
+import Auxiliary.State
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -12,6 +13,7 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 import FileParser.Types
 import Game.BoardGeneration
+import Game.Display
 import Game.GameState
 import Game.StatBlockGeneration
 import Game.UnitPlacement
@@ -93,44 +95,50 @@ updateStateBoard (col, row) newTile =
     (\gameState -> gameState {board = updateBoard (board gameState) (col, row) newTile})
 
 -- ~ Updates the board if a certain unit is dead.
-updateIfDead :: Int -> State GameState ()
+updateIfDead :: Int -> StateT GameState IO ()
 updateIfDead index = do
   gameState <- get
   let unit = (units gameState) V.! index
    in if not (unitIsAlive unit)
         then do
-          updateStateBoard (getPosition unit) Empty
+          morphStateFunction $ updateStateBoard (getPosition unit) Empty
+          lift $ printUnitDeathMessage unit
           return ()
         else return ()
 
 -- ~ Rolls the attack and damage of an attack, given its description.
-rollAttack :: AttackDesc -> State GameState (Int, Int)
+rollAttack :: AttackDesc -> StateT GameState IO (Int, Int)
 rollAttack (_, mod, damage) = do
-  attackRoll <- rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = mod})
-  damageRoll <- rollDice damage
+  attackRoll <- morphStateFunction $ rollDice (DieRoll {dieAmount = 1, dieValue = 20, modifier = mod})
+  damageRoll <- morphStateFunction $ rollDice damage
   return (attackRoll, max 1 damageRoll)
 
 -- ~ Checks if an attack (described by its attack and damage rolls) hits a given
 -- ~ unit, and updates its health points in case it does.
-checkAttackHit :: Int -> (Int, Int) -> State GameState ()
-checkAttackHit defendInd (attackRoll, damageRoll) = do
-  defenderUnit <- gets (\gameState -> (units gameState) V.! defendInd)
-  case defenderUnit of
-    (Player _) -> return ()
-    (Mob defender) ->
-      if attackRoll >= armorClass (statBlock defender)
-        then
-          modify
-            ( \gameState ->
-                let newDefender = defender {statBlock = (statBlock defender) {healthPoints = healthPoints (statBlock defender) - damageRoll}}
-                    newUnits = (units gameState) V.// [(defendInd, Mob newDefender)]
-                 in gameState {units = newUnits}
-            )
-        else return ()
+checkAttackHit :: Maybe Int -> Int -> (Int, Int) -> StateT GameState IO ()
+checkAttackHit attackInd defendInd (attackRoll, damageRoll) = do
+  gameState <- get
+  let attackerUnit = maybe Nothing (\index -> Just ((units gameState) V.! index)) attackInd
+      defenderUnit = (units gameState) V.! defendInd
+   in do
+        lift $ printUnitAttackMessage attackerUnit defenderUnit attackRoll damageRoll
+        case defenderUnit of
+          (Player _) -> return ()
+          (Mob defender) ->
+            if attackRoll >= armorClass (statBlock defender)
+              then do
+                modify
+                  ( \gameState ->
+                      let newDefender = defender {statBlock = (statBlock defender) {healthPoints = healthPoints (statBlock defender) - damageRoll}}
+                          newUnits = (units gameState) V.// [(defendInd, Mob newDefender)]
+                       in gameState {units = newUnits}
+                  )
+                lift $ printAttackHitMessage defenderUnit damageRoll
+              else lift $ printAttackMissMessage
 
 -- ~ Rolls all attacks from the attacking unit to the defending unit, and updates
 -- ~ the second one in case it's dead after them.
-resolveAttack :: Int -> Int -> (MobStatBlock -> [AttackDesc]) -> State GameState ()
+resolveAttack :: Int -> Int -> (MobStatBlock -> [AttackDesc]) -> StateT GameState IO ()
 resolveAttack attackInd defendInd attackType = do
   attackerUnit <- gets (\gameState -> (units gameState) V.! attackInd)
   case attackerUnit of
@@ -142,20 +150,21 @@ resolveAttack attackInd defendInd attackType = do
              in gameState {units = (units gameState) V.// [(attackInd, Mob newAttacker)]}
         )
       attackRolls <- mapM rollAttack (attackType (statBlock attacker))
-      mapM_ (checkAttackHit defendInd) attackRolls
+      mapM_ (checkAttackHit (Just attackInd) defendInd) attackRolls
       updateIfDead defendInd
 
 -- ~ Moves the given unit to the given coordinate.
-moveUnit :: Int -> Coordinate -> State GameState ()
+moveUnit :: Int -> Coordinate -> StateT GameState IO ()
 moveUnit index (newCol, newRow) = do
   unit <- gets (\gameState -> (units gameState) V.! index)
-  updateStateBoard (getPosition unit) Empty
+  morphStateFunction $ updateStateBoard (getPosition unit) Empty
   modify
     ( \gameState ->
         let newUnit = updateUnitPosition unit (newCol, newRow)
          in gameState {units = (units gameState) V.// [(index, newUnit)]}
     )
-  updateStateBoard (newCol, newRow) (Unit index)
+  morphStateFunction $ updateStateBoard (newCol, newRow) (Unit index)
+  lift $ printUnitMovementMessage unit (newCol, newRow)
 
 -- ~ Returns a list of all unit indices in the given set that are present
 -- ~ in the given target history.
@@ -195,7 +204,7 @@ evaluateTarget gameState distanceMap index (Description adjective unitDesc) =
 -- ~ Moves a unit as far as possible in the direction of the given coordinate.
 -- ~ The boolean argument indicates whether the unit should look to step into
 -- ~ the given tile or get in one of its adjacent tiles.
-moveTowardsPosition :: Int -> Board DistanceMapTile -> Coordinate -> Int -> Bool -> State GameState ()
+moveTowardsPosition :: Int -> Board DistanceMapTile -> Coordinate -> Int -> Bool -> StateT GameState IO ()
 moveTowardsPosition index distanceMap position maxDistance trimLast =
   let pathToTarget = buildPathToTarget position distanceMap
       realPath = if trimLast then tail (pathToTarget) else pathToTarget
@@ -204,7 +213,7 @@ moveTowardsPosition index distanceMap position maxDistance trimLast =
         Just ((newCol, newRow), _) -> moveUnit index (newCol, newRow)
 
 -- ~ Evaluates a unit's attack action.
-evalAttackAction :: Int -> Target -> Bool -> State GameState Bool
+evalAttackAction :: Int -> Target -> Bool -> StateT GameState IO Bool
 evalAttackAction index target isFullAttack = do
   gameState <- get
   let attackerPosition = getPosition ((units gameState) V.! index)
@@ -231,7 +240,7 @@ evalAttackAction index target isFullAttack = do
 -- ~ Evaluates a unit's action and returns whether it was fully completed.
 -- ~ In the case of having an invalid action target, the function returns the action could be
 -- ~ carried out since it will never be able to be fully completed.
-evalAction :: Int -> TurnAction -> State GameState Bool
+evalAction :: Int -> TurnAction -> StateT GameState IO Bool
 evalAction index (Move (Approach target)) = do
   gameState <- get
   let distanceMap = buildWalkingDistanceMap (board gameState) [(getPosition ((units gameState) V.! index))]
@@ -258,7 +267,7 @@ evalAction index (Standard (AttackAction target)) = evalAttackAction index targe
 evalAction index (Full (FullAttackAction target)) = evalAttackAction index target True
 
 -- ~ Evaluates all actions in a unit's turn and returns whether all of them could be carried out.
-evalTurn :: Int -> [TurnAction] -> State GameState Bool
+evalTurn :: Int -> [TurnAction] -> StateT GameState IO Bool
 evalTurn _ [] = return True
 evalTurn _ (Pass : as) = return True
 evalTurn index (action : as) = do
@@ -268,7 +277,7 @@ evalTurn index (action : as) = do
 
 -- ~ Evaluates one turn of the given unit's AI action and returns its
 -- ~ advanced action and whether anything was carried out.
-aiStep :: Int -> Action -> State GameState (Action, Bool)
+aiStep :: Int -> Action -> StateT GameState IO (Action, Bool)
 aiStep index None = return (None, False)
 aiStep index (Turn ts) = do
   shouldAdvance <- evalTurn index ts

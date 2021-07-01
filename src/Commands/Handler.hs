@@ -2,13 +2,12 @@ module Commands.Handler where
 
 import AIActions.BreadthFirstSearch
 import AIActions.Evaluate
+import Auxiliary.State
 import Commands.Lexer
 import Commands.Parser
 import Commands.Tokens
 import Commands.Types
 import Control.Exception
-import Control.Monad.Identity
-import Control.Monad.Morph
 import Control.Monad.State
 import qualified Data.List as L
 import qualified Data.Vector as V
@@ -17,10 +16,6 @@ import Game.Display
 import Game.GameState
 import Game.UnitPlacement
 import System.IO
-
--- ~ Auxiliary function that morphs from State to StateT.
-morphStateFunction :: State GameState a -> StateT GameState IO a
-morphStateFunction stateFunction = hoist (return . runIdentity) stateFunction
 
 -- ~ Checks the given index is within the possible values.
 isValidUnitIndex :: GameState -> Int -> Bool
@@ -115,15 +110,15 @@ handleCommand (Move target movement) = do
       evaluatedMovement <- morphStateFunction $ evalCommandMovement unitIndex movement
       case evaluatedMovement of
         Nothing -> do lift $ putStrLn "Invalid movement command for that unit."
-        Just position -> do morphStateFunction $ moveUnit unitIndex position
+        Just position -> do moveUnit unitIndex position
   return True
 handleCommand (Attack target attack damage) = do
   gameState <- get
   case evalCommandTarget gameState True target of
     Nothing -> do lift $ putStrLn "Invalid command target."
     Just unitIndex -> do
-      morphStateFunction $ checkAttackHit unitIndex (attack, damage)
-      morphStateFunction $ updateIfDead unitIndex
+      checkAttackHit Nothing unitIndex (attack, damage)
+      updateIfDead unitIndex
   return True
 handleCommand (Kill target) = do
   gameState <- get
@@ -131,7 +126,7 @@ handleCommand (Kill target) = do
     Nothing -> do lift $ putStrLn "Invalid command target."
     Just unitIndex -> do
       morphStateFunction $ setUnitDead unitIndex
-      morphStateFunction $ updateIfDead unitIndex
+      updateIfDead unitIndex
   return True
 
 -- ~ Prompts the user for a command, handles it and is called again until the user says they're done.

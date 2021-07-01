@@ -6,6 +6,31 @@ import Game.BoardGeneration
 import Game.StatBlockGeneration
 import Game.UnitPlacement
 
+-- ~ Formats a combination of a unit's team, name and identifier.
+showCompleteUnitName :: Unit -> String
+showCompleteUnitName unit = getTeam unit ++ ": " ++ getName unit ++ ": " ++ show (getIdentifier unit)
+
+-- ~ Prints a message saying the unit died.
+printUnitDeathMessage :: Unit -> IO ()
+printUnitDeathMessage unit = putStrLn ("- " ++ showCompleteUnitName unit ++ " died.")
+
+-- ~ Prints a message saying the moved to the given position.
+printUnitMovementMessage :: Unit -> Coordinate -> IO ()
+printUnitMovementMessage unit position = putStrLn ("- " ++ showCompleteUnitName unit ++ " moved to " ++ show position ++ ".")
+
+-- ~ Prints a message describing an attack action.
+printUnitAttackMessage :: Maybe Unit -> Unit -> Int -> Int -> IO ()
+printUnitAttackMessage Nothing defender attack damage = putStrLn ("- " ++ showCompleteUnitName defender ++ " is attacked with a roll of " ++ show attack ++ " for " ++ show damage ++ " damage.")
+printUnitAttackMessage (Just attacker) defender attack damage = putStrLn ("- " ++ showCompleteUnitName attacker ++ " attacked " ++ showCompleteUnitName defender ++ " with a roll of " ++ show attack ++ " for " ++ show damage ++ " damage.")
+
+-- ~ Prints a message saying the unit got hit for the given amount of damage.
+printAttackHitMessage :: Unit -> Int -> IO ()
+printAttackHitMessage defender damage = putStrLn ("- Attack hit. " ++ showCompleteUnitName defender ++ " lost " ++ show damage ++ " health points.")
+
+-- ~ Prints a message saying an attack missed.
+printAttackMissMessage :: IO ()
+printAttackMissMessage = putStrLn "- Attack missed."
+
 -- ~ Prints the given indices.
 printInitiativeOrder :: V.Vector Int -> IO ()
 printInitiativeOrder indices = do
@@ -42,7 +67,7 @@ printUnit :: Int -> Unit -> IO ()
 printUnit index (Mob unit) =
   let stats = statBlock unit
    in do
-        putStrLn ((team unit) ++ " : " ++ (name unit) ++ " : " ++ (show (identifier unit)) ++ "  (Index " ++ (show index) ++ ")")
+        putStrLn (showCompleteUnitName (Mob unit) ++ "  (Index " ++ (show index) ++ ")")
         putStrLn "AI-controlled unit"
         putStrLn ("  Status: " ++ if unitIsAlive (Mob unit) then "Alive" else "Dead")
         putStrLn ("  Position: " ++ show (position unit))
@@ -52,7 +77,7 @@ printUnit index (Mob unit) =
         putStrLn ("  Attack: " ++ showAttackList (attack stats))
         putStrLn ("  Full Attack : " ++ showAttackList (fullAttack stats))
 printUnit index (Player unit) = do
-  putStrLn ((playerTeam unit) ++ " : " ++ (playerName unit) ++ " : " ++ (show (playerIdentifier unit)) ++ "  (Index " ++ (show index) ++ ")")
+  putStrLn (showCompleteUnitName (Player unit) ++ "  (Index " ++ (show index) ++ ")")
   putStrLn "Player-controlled unit"
   putStrLn ("  Status: " ++ if unitIsAlive (Player unit) then "Alive" else "Dead")
   putStrLn ("  Position: " ++ show (playerPosition unit))
